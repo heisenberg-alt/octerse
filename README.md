@@ -75,7 +75,7 @@ curl -o .github/copilot-instructions.md \
 | Mode | When | Vibe |
 |---|---|---|
 | `lite` | New teams, mixed audiences | Keep grammar. Drop filler. Code-first. |
-| `full` *(default)* | Most engineers | Fragments OK. No articles. Default brevity. |
+| `full` *(default)* | Most engineers | Fragments OK. No articles. Maximum brevity. |
 | `ultra` | Senior devs only | Telegraphic. Symbols. `→` `∴` `==`. |
 | `enterprise` | GitHub Enterprise | `lite` + PII / secrets / policy guardrails. |
 
@@ -159,11 +159,6 @@ the included pool and overage. Plug your team's profile into the
 PRs welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md). Tone changes to the
 instruction payloads must include a Copilot-Chat before/after in the PR
 description.
-
-## Acknowledgements
-
-Inspired by [``](https://github.com//) — Octerse
-is its GitHub-Copilot-native cousin.
 
 ## License
 

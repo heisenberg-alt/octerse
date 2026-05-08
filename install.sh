@@ -24,7 +24,7 @@ Usage:
 
 Modes:
   lite          keep grammar, drop filler
-  full          default brevity (default)
+  full          default brevity — fragments OK, no filler (default)
   ultra         telegraphic, symbols, senior devs
   enterprise    lite + GHE PII / policy guardrails
 
