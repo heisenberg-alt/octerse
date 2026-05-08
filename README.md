@@ -110,6 +110,43 @@ AGENTS.md                           ← optional, with --with-agents
 
 Nothing outside these paths is touched. `--uninstall` removes them all.
 
+## octerse-shrink (MCP middleware)
+
+Most MCP servers ship verbose tool descriptions ("This tool is used to allow
+you to perform comprehensive filesystem operations…"). Every Copilot Chat
+session re-pays for that fluff on every turn.
+
+`octerse-shrink` is a tiny stdio proxy that wraps any MCP server and compresses
+`tools/list` / `prompts/list` / `resources/list` `description` fields through a
+deterministic rule pipeline. **`tools/call` payloads are never touched** —
+pass-through is byte-for-byte.
+
+```jsonc
+// .vscode/mcp.json
+{
+  "servers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y", "octerse-shrink", "--",
+        "npx", "-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"
+      ]
+    }
+  }
+}
+```
+
+Typical savings on a real `tools/list` response are 60–80% of the description
+bytes. No LLM, no telemetry, no persistence — see
+[`mcp-servers/octerse-shrink/`](./mcp-servers/octerse-shrink/) for the engine,
+the CLI, and the rule list.
+
+```sh
+bash install.sh --with-shrink   # appends a commented example to .vscode/mcp.json
+OCTERSE_SHRINK=0 …              # bypass at runtime, no config edit
+```
+
 ## The five levers
 
 Octerse is the **output** lever. The other four cover the input side:

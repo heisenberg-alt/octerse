@@ -13,6 +13,8 @@
   Overwrite existing files without prompting.
 .PARAMETER WithAgents
   Also write AGENTS.md.
+.PARAMETER WithShrink
+  Append a commented octerse-shrink example to .vscode/mcp.json (never overwrites).
 .PARAMETER SkipVscode
   Skip .vscode/settings.json.
 .PARAMETER Uninstall
@@ -25,12 +27,13 @@ param(
   [switch]$DryRun,
   [switch]$Force,
   [switch]$WithAgents,
+  [switch]$WithShrink,
   [switch]$SkipVscode,
   [switch]$Uninstall
 )
 
 $ErrorActionPreference = 'Stop'
-$Version = '0.1.0'
+$Version = '0.3.0'
 $RepoRaw = if ($env:OCTERSE_RAW) { $env:OCTERSE_RAW } else { 'https://raw.githubusercontent.com/heisenberg-alt/octerse/main' }
 
 function Say  ($m) { Write-Host "  $m" }
@@ -124,6 +127,38 @@ foreach ($skill in 'octerse-commit','octerse-review','octerse-help') {
 
 if (-not $SkipVscode) { Merge-VscodeSettings }
 if ($WithAgents)      { Fetch-File 'templates/AGENTS.md' 'AGENTS.md' }
+
+if ($WithShrink) {
+  $mcpTarget = '.vscode/mcp.json'
+  $marker    = 'octerse-shrink: example wrapper'
+  if ((Test-Path $mcpTarget) -and (Select-String -Path $mcpTarget -Pattern $marker -Quiet)) {
+    Say "$marker already present in $mcpTarget — keeping"
+  } elseif ($DryRun) {
+    Say "[dry-run] append octerse-shrink example to $mcpTarget"
+  } else {
+    if (-not (Test-Path .vscode)) { New-Item -ItemType Directory -Path .vscode | Out-Null }
+    if (-not (Test-Path $mcpTarget)) { Set-Content -Path $mcpTarget -Value "{`n  `"servers`": {}`n}`n" -NoNewline }
+    $snippet = @'
+
+// ───────────────────────────────────────────────────────────────────────────
+// octerse-shrink: example wrapper. Wrap any stdio MCP server like this to
+// compress tools/list descriptions in flight. Tool calls are NOT touched.
+// Default OFF — copy this snippet into the "servers" object above to enable.
+//
+// "filesystem-shrunk": {
+//   "type": "stdio",
+//   "command": "npx",
+//   "args": ["-y", "octerse-shrink", "--",
+//            "npx", "-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"]
+// }
+//
+// Set OCTERSE_SHRINK=0 in env to bypass at runtime without changing config.
+// ───────────────────────────────────────────────────────────────────────────
+'@
+    Add-Content -Path $mcpTarget -Value $snippet
+    OK "appended octerse-shrink example to $mcpTarget (commented; copy to enable)"
+  }
+}
 
 if (-not $DryRun) {
   if (-not (Test-Path .octerse)) { New-Item -ItemType Directory -Path .octerse | Out-Null }

@@ -38,3 +38,28 @@ jobs:
         run: shellcheck -x -e SC1091 --severity=warning gh-octerse
       - name: Lint installer
         run: shellcheck --severity=warning install.sh || true   # advisory until installer is hardened
+
+  shrink:
+    name: octerse-shrink (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    defaults:
+      run:
+        working-directory: mcp-servers/octerse-shrink
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci || npm install
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Smoke test built CLI
+        run: |
+          chmod +x dist/cli.js
+          node dist/cli.js --version
+          node dist/cli.js --help | head -5

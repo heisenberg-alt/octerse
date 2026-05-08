@@ -1,0 +1,54 @@
+{
+  "name": "octerse-shrink",
+  "version": "0.3.0",
+  "description": "Deterministic stdio middleware that compresses MCP tool/prompt/resource description fields. No LLM, no telemetry.",
+  "license": "MIT",
+  "author": "heisenberg-alt",
+  "homepage": "https://github.com/heisenberg-alt/octerse",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heisenberg-alt/octerse.git",
+    "directory": "mcp-servers/octerse-shrink"
+  },
+  "bugs": {
+    "url": "https://github.com/heisenberg-alt/octerse/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "copilot",
+    "tokens",
+    "compression",
+    "octerse"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "octerse-shrink": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepack": "npm run clean && npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

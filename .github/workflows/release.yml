@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write   # for npm provenance
 
 jobs:
   release:
@@ -28,3 +29,46 @@ jobs:
             out/install.sh
             out/install.ps1
             out/SHA256SUMS
+
+  npm-publish:
+    name: publish octerse-shrink to npm
+    runs-on: ubuntu-latest
+    # Only run when the tag's package version matches mcp-servers/octerse-shrink/package.json.
+    # We compute the comparison inline; the job is a no-op if they don't match.
+    needs: release
+    defaults:
+      run:
+        working-directory: mcp-servers/octerse-shrink
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+      - name: Determine if this tag matches octerse-shrink package version
+        id: ver
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "pkg=$pkg" >> "$GITHUB_OUTPUT"
+          if [ "$tag" = "$pkg" ]; then
+            echo "match=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "match=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::tag ($tag) != octerse-shrink package version ($pkg). Skipping npm publish."
+          fi
+      - name: Install
+        if: steps.ver.outputs.match == 'true'
+        run: npm ci || npm install
+      - name: Test
+        if: steps.ver.outputs.match == 'true'
+        run: npm test
+      - name: Build
+        if: steps.ver.outputs.match == 'true'
+        run: npm run build
+      - name: Publish (with provenance)
+        if: steps.ver.outputs.match == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

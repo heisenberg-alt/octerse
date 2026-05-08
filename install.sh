@@ -3,7 +3,7 @@
 # https://github.com/heisenberg-alt/octerse · MIT
 set -euo pipefail
 
-VERSION="0.1.0"
+VERSION="0.3.0"
 REPO_RAW="${OCTERSE_RAW:-https://raw.githubusercontent.com/heisenberg-alt/octerse/main}"
 
 # ---- args ------------------------------------------------------------------
@@ -12,6 +12,7 @@ DRY_RUN=0
 UNINSTALL=0
 FORCE=0
 WITH_AGENTS=0
+WITH_SHRINK=0
 SKIP_VSCODE=0
 
 usage() {
@@ -33,6 +34,9 @@ Flags:
   --dry-run           preview file writes; touch nothing
   --force             overwrite existing files without prompting
   --with-agents       also drop AGENTS.md (for Copilot CLI / agent contexts)
+  --with-shrink       append a commented octerse-shrink example to .vscode/mcp.json
+                      (octerse-shrink is the MCP middleware that compresses
+                      tools/list descriptions — see mcp-servers/octerse-shrink/)
   --skip-vscode       don't write .vscode/settings.json
   --uninstall         remove all octerse-managed files
   -h, --help          this help
@@ -47,6 +51,7 @@ while (( $# )); do
     --dry-run)      DRY_RUN=1; shift ;;
     --force)        FORCE=1; shift ;;
     --with-agents)  WITH_AGENTS=1; shift ;;
+    --with-shrink)  WITH_SHRINK=1; shift ;;
     --skip-vscode)  SKIP_VSCODE=1; shift ;;
     --uninstall)    UNINSTALL=1; shift ;;
     -h|--help)      usage; exit 0 ;;
@@ -173,6 +178,40 @@ fi
 # 4. AGENTS.md (optional)
 if (( WITH_AGENTS )); then
   fetch "templates/AGENTS.md" "AGENTS.md"
+fi
+
+# 4b. octerse-shrink hint in .vscode/mcp.json (optional, never auto-rewrites)
+if (( WITH_SHRINK )); then
+  mcp_target=".vscode/mcp.json"
+  marker="octerse-shrink: example wrapper"
+  if [[ -f "$mcp_target" ]] && grep -q "$marker" "$mcp_target" 2>/dev/null; then
+    say "$marker already present in $mcp_target — keeping"
+  else
+    if (( DRY_RUN )); then
+      say "[dry-run] append octerse-shrink example to $mcp_target"
+    else
+      mkdir -p .vscode
+      [[ -f "$mcp_target" ]] || printf '{\n  "servers": {}\n}\n' > "$mcp_target"
+      cat >> "$mcp_target" <<'MCPEOF'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// octerse-shrink: example wrapper. Wrap any stdio MCP server like this to
+// compress tools/list descriptions in flight. Tool calls are NOT touched.
+// Default OFF — copy this snippet into the "servers" object above to enable.
+//
+// "filesystem-shrunk": {
+//   "type": "stdio",
+//   "command": "npx",
+//   "args": ["-y", "octerse-shrink", "--",
+//            "npx", "-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"]
+// }
+//
+// Set OCTERSE_SHRINK=0 in env to bypass at runtime without changing config.
+// ─────────────────────────────────────────────────────────────────────────────
+MCPEOF
+      ok "appended octerse-shrink example to $mcp_target (commented; copy to enable)"
+    fi
+  fi
 fi
 
 # 5. Mode marker (used by `gh octerse mode` / `gh octerse stats`)

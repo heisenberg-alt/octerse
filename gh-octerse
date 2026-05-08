@@ -3,7 +3,7 @@
 # Runs as `gh octerse <subcommand>`.
 set -euo pipefail
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 EXT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 usage() {
