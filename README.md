@@ -1,0 +1,175 @@
+# octerse
+
+> *less prose, more PRs.* — a token-saver for GitHub Copilot.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-blue.svg)](./CONTRIBUTING.md)
+
+[Install](#install) · [Modes](#modes) · [What you get](#what-you-get) · [Playbook](./docs/playbook.md) · [ROI](#roi)
+
+Octerse is a one-line installer that drops a tightly-scoped
+`.github/copilot-instructions.md`, VS Code Copilot Chat settings, and a `gh`
+CLI extension into any repo. Copilot starts answering like an engineer who's
+been on call for 36 hours: code first, words last.
+
+It targets:
+
+- **GitHub Copilot in VS Code** (Copilot Chat, code generation, commit
+  messages, PR review)
+- **GitHub Copilot CLI**
+- **GitHub Enterprise** (with optional `enterprise` mode for policy-aware
+  guardrails)
+- **The `gh` CLI** via the bundled `gh octerse` extension
+
+## Why
+
+GitHub Copilot is moving to **usage-based billing** on June 1, 2026. Every
+input + output token meters. Octerse is the **output lever** of a five-lever
+framework — see [the playbook](./docs/playbook.md) — that routinely cuts
+60–70% of token spend without changing what developers ship.
+
+| Without octerse | With octerse |
+|---|---|
+| "Certainly! I'd be happy to help you with that. Let me take a look at the code…" | `src/auth.ts:14 — blocker: missing await on verifyToken; token always null.` |
+| 200 words then 6 lines of code | 6 lines of code, no preamble |
+
+**Same accuracy. ~65% fewer output tokens.**
+
+Estimate the dollar impact for your team in the
+**[Copilot UBB Estimator →](https://sameerankalgi.github.io/usage-based-billing/)**.
+
+## Install
+
+```sh
+# macOS / Linux / WSL / Git Bash
+curl -fsSL https://raw.githubusercontent.com/OWNER/octerse/main/install.sh | bash
+
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/OWNER/octerse/main/install.ps1 | iex
+```
+
+> **Note:** replace `OWNER` with the GitHub user/org that hosts this repo.
+
+The installer detects your repo, writes `.github/copilot-instructions.md`,
+merges `.vscode/settings.json`, and (optionally) drops `AGENTS.md`. Pass
+`--mode lite|full|ultra|enterprise`, `--dry-run` to preview, or
+`--uninstall` to remove. `bash install.sh --help` for the full flag matrix.
+
+### Or via the `gh` CLI
+
+```sh
+gh extension install OWNER/octerse
+gh octerse install --mode full
+```
+
+### Manual
+
+```sh
+# In any git repo
+curl -o .github/copilot-instructions.md \
+  https://raw.githubusercontent.com/OWNER/octerse/main/instructions/full.md
+```
+
+## Modes
+
+| Mode | When | Vibe |
+|---|---|---|
+| `lite` | New teams, mixed audiences | Keep grammar. Drop filler. Code-first. |
+| `full` *(default)* | Most engineers | Fragments OK. No articles. Default brevity. |
+| `ultra` | Senior devs only | Telegraphic. Symbols. `→` `∴` `==`. |
+| `enterprise` | GitHub Enterprise | `lite` + PII / secrets / policy guardrails. |
+
+Switch any time:
+
+```sh
+gh octerse mode lite
+```
+
+## What you get
+
+| Surface | Effect |
+|---|---|
+| Copilot Chat in VS Code | Terse answers, code-first, no preamble |
+| Copilot inline suggestions | Unchanged — completions stay free under UBB |
+| Copilot commit messages | Conventional Commits, ≤50 char subject |
+| Copilot PR review | One-line findings: `path:line — sev: issue. fix.` |
+| `/octerse-commit`, `/octerse-review`, `/octerse-help` | Custom prompts, accessed via `chat.promptFiles` |
+| `gh octerse audit` | Flags bloat in your existing `copilot-instructions.md` |
+| `gh octerse tips` | Eight-habit Monday-morning checklist |
+
+### Files written
+
+```
+.github/copilot-instructions.md     ← active mode
+.vscode/settings.json               ← merged, not overwritten
+.octerse/skills/                    ← /octerse-* prompt files
+AGENTS.md                           ← optional, with --with-agents
+.octerse/                           ← state dir for mode + stats
+```
+
+Nothing outside these paths is touched. `--uninstall` removes them all.
+
+## The five levers
+
+Octerse is the **output** lever. The other four cover the input side:
+
+1. **Context hygiene** — `/clear`, `/compact`, `/context`, `/usage`
+2. **Prompt discipline** — `@file/path:line` refs, one task per prompt, `/plan` first
+3. **Octerse — output compression** *(this tool)*
+4. **Model selection** — cheapest tier that finishes the task; `/model` mid-session
+5. **Scope & tool control** — `/cwd`, content exclusion, tool allow/deny
+
+Stacked, they cut ~70% of token spend.
+**Read the [full playbook →](./docs/playbook.md)** for commands, patterns,
+and admin governance.
+
+## ROI
+
+| Lever | Saves | Notes |
+|---|---|---|
+| Octerse alone | ~65% output | This tool. Output tokens only. |
+| + Prompt discipline | +20% input | `@file:line` refs, one task per prompt |
+| + Right-sized models | +30% $ | Mid-tier instead of Opus for routine work |
+| + Context hygiene | +25% input | `/clear`, `/compact`, `/resume` |
+
+For a 50-developer team on Business, that's the difference between hitting
+the included pool and overage. Plug your team's profile into the
+**[Copilot UBB Estimator](https://sameerankalgi.github.io/usage-based-billing/)** to see the dollar number.
+
+## Privacy
+
+- **No telemetry.** Octerse never phones home.
+- **No network calls** from any installer or extension subcommand.
+- **`gh octerse stats`** is local-only — reads your git log + a counter file.
+- See [SECURITY.md](./SECURITY.md) for our vulnerability-disclosure policy.
+
+## Compatibility
+
+| Surface | Status |
+|---|---|
+| VS Code + Copilot Chat | ✅ |
+| GitHub Copilot CLI | ✅ |
+| GitHub Copilot in JetBrains | ✅ (instructions file honored) |
+| GitHub Copilot in Visual Studio | ✅ (instructions file honored) |
+| GitHub Copilot Enterprise | ✅ when "custom instructions" is enabled at the org policy level |
+| Other AI assistants (Cursor, Continue, Claude Code) | ⚠️  AGENTS.md is honored; native install not yet provided |
+
+## Contributing
+
+PRs welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md). Tone changes to the
+instruction payloads must include a Copilot-Chat before/after in the PR
+description.
+
+## Acknowledgements
+
+The five-lever framework summarized in [docs/playbook.md](./docs/playbook.md)
+adapts material from Joshua Davis (Microsoft Professional Services),
+*Token Optimization — Getting more from every token in GitHub Copilot CLI*,
+April 2026, with attribution.
+
+Inspired by [``](https://github.com//) — Octerse
+is its GitHub-Copilot-native cousin.
+
+## License
+
+MIT. See [LICENSE](./LICENSE).

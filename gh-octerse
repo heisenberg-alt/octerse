@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+# gh-octerse — gh CLI extension entrypoint.
+# Runs as `gh octerse <subcommand>`.
+set -euo pipefail
+
+VERSION="0.1.0"
+EXT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+usage() {
+  cat <<'EOF'
+gh-octerse — terse Copilot mode, controlled from the gh CLI.
+
+Usage:
+  gh octerse <command> [args]
+
+Commands:
+  install [--mode <m>]   install octerse into the current repo
+  uninstall              remove all octerse-managed files
+  mode <m>               switch active mode (lite|full|ultra|enterprise)
+  status                 show the current mode and installed paths
+  audit                  flag bloat in your existing copilot-instructions.md
+  tips                   print the eight-habit Monday-morning checklist
+  stats                  estimated savings for this repo (heuristic, local-only)
+  version                print version and exit
+  help                   this help
+
+ROI calculator:  https://sameerankalgi.github.io/usage-based-billing/
+EOF
+}
+
+# ---- helpers ---------------------------------------------------------------
+in_repo()    { git rev-parse --show-toplevel >/dev/null 2>&1; }
+repo_root()  { git rev-parse --show-toplevel; }
+require_repo() {
+  if ! in_repo; then echo "octerse: not inside a git repo." >&2; exit 1; fi
+}
+
+c_red()    { printf '\033[31m%s\033[0m' "$*"; }
+c_green()  { printf '\033[32m%s\033[0m' "$*"; }
+c_yellow() { printf '\033[33m%s\033[0m' "$*"; }
+c_dim()    { printf '\033[2m%s\033[0m' "$*"; }
+
+# ---- subcommands -----------------------------------------------------------
+cmd_install() {
+  local script="$EXT_DIR/install.sh"
+  if [[ ! -x "$script" ]]; then chmod +x "$script" 2>/dev/null || true; fi
+  if [[ -f "$script" ]]; then
+    OCTERSE_LOCAL_SRC="$EXT_DIR" bash "$script" "$@"
+  else
+    curl -fsSL "https://raw.githubusercontent.com/OWNER/octerse/main/install.sh" | bash -s -- "$@"
+  fi
+}
+
+cmd_uninstall() {
+  cmd_install --uninstall
+}
+
+cmd_mode() {
+  require_repo; cd "$(repo_root)"
+  local new="${1:-}"
+  case "$new" in
+    lite|full|ultra|enterprise) ;;
+    "") echo "octerse: usage: gh octerse mode <lite|full|ultra|enterprise>" >&2; exit 2 ;;
+    *)  echo "octerse: invalid mode '$new'" >&2; exit 2 ;;
+  esac
+  cmd_install --mode "$new" --force
+}
+
+cmd_status() {
+  require_repo; cd "$(repo_root)"
+  local mode='not installed'
+  [[ -f .octerse/mode ]] && mode="$(cat .octerse/mode)"
+  echo "octerse status"
+  echo "  repo:           $(repo_root)"
+  echo "  mode:           $mode"
+  echo "  instructions:   $( [[ -f .github/copilot-instructions.md ]] && echo yes || echo no )"
+  echo "  vscode keys:    $( [[ -f .vscode/settings.json ]] && grep -q octerse .vscode/settings.json 2>/dev/null && echo yes || echo no )"
+  echo "  skills dir:     $( [[ -d .octerse/skills ]] && echo yes || echo no )"
+  echo "  agents file:    $( [[ -f AGENTS.md ]] && echo yes || echo no )"
+}
+
+# Inspect .github/copilot-instructions.md for common bloat patterns.
+# Heuristics adapted from the "Keep custom instructions lean" lever
+# (Davis 2026, Token Optimization for Copilot CLI).
+cmd_audit() {
+  require_repo; cd "$(repo_root)"
+  local f=".github/copilot-instructions.md"
+  if [[ ! -f "$f" ]]; then
+    echo "octerse: $f not found. Run: gh octerse install"; exit 1
+  fi
+
+  local lines bytes
+  lines=$(wc -l <"$f" | tr -d ' ')
+  bytes=$(wc -c <"$f" | tr -d ' ')
+
+  echo "octerse audit · $f"
+  echo "  size:           ${bytes} bytes / ${lines} lines"
+  echo
+
+  local findings=0
+  finding() { findings=$((findings+1)); printf '  %s %s\n' "$(c_yellow '!')" "$*"; }
+  good()    { printf '  %s %s\n' "$(c_green '✓')" "$*"; }
+
+  if (( lines > 100 )); then
+    finding "long file (${lines} lines) — instructions are re-sent every turn; aim for <80"
+  else
+    good "file length OK (${lines} lines)"
+  fi
+
+  if grep -qiE '^#+ *(welcome|introduction|onboarding|history|background)' "$f"; then
+    finding "onboarding/history sections detected — Copilot doesn't need team narrative"
+  fi
+
+  if grep -qE '^[│├└─┌┐┘└╔╗╚╝═║]' "$f"; then
+    finding "ASCII art / box-drawing characters — diagrams cost a lot of tokens"
+  fi
+
+  if grep -qiE 'thank you|please feel free|kind regards|sincerely' "$f"; then
+    finding "pleasantries detected — instructions should command, not converse"
+  fi
+
+  local fence_lines
+  fence_lines=$(awk '/^```/{f=!f;next} f' "$f" | wc -l | tr -d ' ')
+  if (( fence_lines > 60 )); then
+    finding "${fence_lines} lines of fenced code — link to a style guide instead"
+  fi
+
+  if grep -qE 'http[s]?://' "$f"; then
+    local url_count
+    url_count=$(grep -cE 'http[s]?://' "$f")
+    if (( url_count > 5 )); then
+      finding "${url_count} URLs — consolidate or move to docs"
+    fi
+  fi
+
+  if ! grep -qiE 'do not|don.t|avoid|never' "$f"; then
+    finding "no explicit \"do not\" rules — these are the highest-signal lines"
+  else
+    good "explicit do-not rules present"
+  fi
+
+  echo
+  if (( findings == 0 )); then
+    echo "$(c_green 'No findings.') Lean and mean."
+  else
+    echo "$(c_yellow "${findings} finding(s).") Trim and re-run \`gh octerse audit\`."
+    echo "$(c_dim 'Reference: docs/playbook.md → Lever 3.')"
+  fi
+}
+
+cmd_tips() {
+  cat <<'EOF'
+
+  Octerse — Monday-morning checklist
+  ----------------------------------
+
+   1. Start a new session per task    /clear or /new between unrelated work
+   2. Open with /plan                  for anything beyond a one-line change
+   3. Reference files with @path       not "look at src/"
+   4. /compact proactively             before you switch focus
+   5. Default to mid-tier models       /model up only when stuck, then back
+   6. Trim copilot-instructions.md     gh octerse audit will flag bloat
+   7. End every session with /usage    cost signal before the invoice
+   8. /delegate long-running work      runs async, returns a PR
+
+  Three-command starter kit:  /clear  /model  /usage
+                              ─────   ─────   ─────
+                              context cost    visibility
+
+  Full playbook:  https://github.com/OWNER/octerse/blob/main/docs/playbook.md
+  ROI calculator: https://sameerankalgi.github.io/usage-based-billing/
+
+EOF
+}
+
+# Local-only stats heuristic. No network calls. Best-effort.
+cmd_stats() {
+  require_repo; cd "$(repo_root)"
+  local since="${1:-7 days ago}"
+  local commits
+  commits=$(git log --since="$since" --pretty=oneline 2>/dev/null | wc -l | tr -d ' ')
+
+  # Crude estimate: assume ~3k tokens saved per Copilot-assisted commit
+  # under octerse vs. baseline. This is a guess, not a measurement.
+  local saved=$(( commits * 3000 ))
+  local cents_saved=$(( saved / 1000 * 1 ))   # ~$0.01 per 1k tokens, rough
+
+  cat <<EOF
+
+  Octerse — local stats (heuristic)
+  ---------------------------------
+  Period:               $since
+  Commits in window:    $commits
+  Est. tokens saved:    ~${saved}
+  Est. dollars saved:   ~\$$( printf '%d.%02d' $((cents_saved/100)) $((cents_saved%100)) )
+
+  Disclaimer: this is a rough heuristic. Copilot Chat does not expose token
+  counts in a stable API, so we estimate from commit cadence assuming the
+  baseline token reductions documented in docs/playbook.md.
+
+  For a real \$ estimate based on your team's profile, plug your numbers into
+  https://sameerankalgi.github.io/usage-based-billing/
+
+EOF
+}
+
+# ---- dispatch --------------------------------------------------------------
+sub="${1:-help}"; shift || true
+case "$sub" in
+  install)   cmd_install "$@" ;;
+  uninstall) cmd_uninstall ;;
+  mode)      cmd_mode "$@" ;;
+  status)    cmd_status ;;
+  audit)     cmd_audit ;;
+  tips)      cmd_tips ;;
+  stats)     cmd_stats "$@" ;;
+  version|--version|-v) echo "gh-octerse $VERSION" ;;
+  help|-h|--help|"")    usage ;;
+  *)         echo "gh-octerse: unknown command: $sub" >&2; usage >&2; exit 2 ;;
+esac

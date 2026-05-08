@@ -1,0 +1,30 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release artifacts
+        run: |
+          mkdir -p out
+          cp install.sh   out/
+          cp install.ps1  out/
+          (cd out && sha256sum install.sh install.ps1 > SHA256SUMS)
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            out/install.sh
+            out/install.ps1
+            out/SHA256SUMS
