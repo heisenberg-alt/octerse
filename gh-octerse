@@ -3,7 +3,7 @@
 # Runs as `gh octerse <subcommand>`.
 set -euo pipefail
 
-VERSION="0.4.0"
+VERSION="0.5.0"
 EXT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 usage() {
@@ -22,6 +22,7 @@ Commands:
   tips                   print the eight-habit Monday-morning checklist
   stats                  estimated savings for this repo (heuristic, local-only)
   spend [--org <n>]      org Copilot $ this billing period (reads api.github.com)
+  compress <file>        compress AGENTS.md / instructions/ via octerse-shrink
   version                print version and exit
   help                   this help
 
@@ -506,6 +507,156 @@ EOF
   fi
 }
 
+# ---- compress (markdown shrinking via octerse-shrink) ---------------------
+
+compress_usage() {
+  cat <<'EOF'
+gh octerse compress — shrink AGENTS.md / instructions/*.md without changing meaning.
+
+Usage:
+  gh octerse compress <file>           rewrite <file> in place (backup to <file>.original.md)
+  gh octerse compress --dry-run <file> print the new content to stdout, don't touch the file
+  gh octerse compress --restore <file> restore <file> from <file>.original.md and remove backup
+  gh octerse compress --check <file>   exit 0 if already compressed, 1 otherwise
+
+Flags:
+  --force               re-compress an already-compressed file (or overwrite an existing backup)
+  --dry-run             show output, don't write
+  --restore             undo a prior compress (uses <file>.original.md)
+  --check               exit code only
+
+Refusals:
+  - file is untracked by git           (run git add first, so a revert is one command away)
+  - <file>.original.md already exists  (clean it up or pass --force)
+  - file is a symlink                  (resolves ambiguity about which file to back up)
+  - <!-- octerse:keep --> covers entire file (we have nothing left to compress)
+EOF
+}
+
+compress_resolve_runner() {
+  # Prefer a locally built dist when we're inside the octerse source repo
+  # (handy for development); fall back to the published npm package via npx.
+  local script_dir
+  script_dir=$(cd "$(dirname "$0")" && pwd)
+  if [ -f "$script_dir/mcp-servers/octerse-shrink/dist/cli.js" ]; then
+    echo "node $script_dir/mcp-servers/octerse-shrink/dist/cli.js"
+    return
+  fi
+  if command -v npx >/dev/null 2>&1; then
+    echo "npx --yes octerse-shrink@latest"
+    return
+  fi
+  return 1
+}
+
+cmd_compress() {
+  local dry_run=0 restore=0 force=0 check=0 file=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --dry-run) dry_run=1; shift ;;
+      --restore) restore=1; shift ;;
+      --force)   force=1; shift ;;
+      --check)   check=1; shift ;;
+      -h|--help) compress_usage; return 0 ;;
+      --) shift; file="${1:-}"; break ;;
+      -*) echo "octerse compress: unknown flag: $1" >&2; compress_usage >&2; return 2 ;;
+      *)  file="$1"; shift ;;
+    esac
+  done
+
+  if [ -z "$file" ]; then
+    echo "octerse compress: provide a file path." >&2
+    compress_usage >&2
+    return 2
+  fi
+  if [ ! -e "$file" ]; then
+    echo "octerse compress: not found: $file" >&2
+    return 1
+  fi
+  if [ -L "$file" ]; then
+    echo "octerse compress: refusing to follow symlink: $file" >&2
+    return 1
+  fi
+  if [ ! -f "$file" ]; then
+    echo "octerse compress: not a regular file: $file" >&2
+    return 1
+  fi
+
+  local backup="${file%.md}.original.md"
+  case "$file" in
+    *.md) ;;
+    *)    backup="${file}.original" ;;
+  esac
+
+  if (( restore )); then
+    if [ ! -f "$backup" ]; then
+      echo "octerse compress: no backup at $backup" >&2
+      return 1
+    fi
+    mv "$backup" "$file"
+    echo "octerse compress: restored $file from $backup"
+    return 0
+  fi
+
+  local runner
+  if ! runner=$(compress_resolve_runner); then
+    echo "octerse compress: needs node + npx (or a local mcp-servers/octerse-shrink/dist build)." >&2
+    return 1
+  fi
+
+  if (( check )); then
+    # shellcheck disable=SC2086
+    $runner compress --check --stdin < "$file" >/dev/null 2>&1
+    return $?
+  fi
+
+  if (( dry_run )); then
+    # shellcheck disable=SC2086
+    $runner compress --stdin ${force:+--force} < "$file"
+    return $?
+  fi
+
+  # Refuse if file is untracked (so user can always `git checkout` to revert).
+  if in_repo; then
+    if ! git -C "$(repo_root)" ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+      echo "octerse compress: $file is untracked. \`git add\` it first so revert is a one-liner." >&2
+      return 1
+    fi
+  fi
+
+  if [ -e "$backup" ] && (( ! force )); then
+    echo "octerse compress: $backup already exists. Pass --force to overwrite, or --restore to undo a prior compress." >&2
+    return 1
+  fi
+
+  # Capture compressed output to a temp file. If shrink refuses (eg keep-span
+  # covers everything), bail before we move the backup. We deliberately don't
+  # use an EXIT trap (function-local vars are gone by the time it fires under
+  # `set -u`) and instead clean up on every return path.
+  local tmp tmp_err
+  tmp=$(mktemp -t octerse-compress.XXXXXX) || { echo "octerse compress: mktemp failed" >&2; return 1; }
+  tmp_err="$tmp.err"
+  if ! $runner compress --stdin ${force:+--force} < "$file" > "$tmp" 2>"$tmp_err"; then
+    cat "$tmp_err" >&2
+    rm -f "$tmp" "$tmp_err"
+    return 1
+  fi
+  if [ ! -s "$tmp" ]; then
+    cat "$tmp_err" >&2
+    rm -f "$tmp" "$tmp_err"
+    return 1
+  fi
+
+  cp "$file" "$backup"
+  mv "$tmp" "$file"
+  rm -f "$tmp_err"
+
+  local in_size out_size
+  in_size=$(wc -c < "$backup" | tr -d ' ')
+  out_size=$(wc -c < "$file" | tr -d ' ')
+  echo "octerse compress: $file  $in_size → $out_size bytes  (backup: $backup)"
+}
+
 # ---- dispatch --------------------------------------------------------------
 # Skip when sourced (lets tests load helper functions without executing).
 (return 0 2>/dev/null) && return 0
@@ -520,6 +671,7 @@ case "$sub" in
   tips)      cmd_tips ;;
   stats)     cmd_stats "$@" ;;
   spend)     cmd_spend "$@" ;;
+  compress)  cmd_compress "$@" ;;
   version|--version|-v) echo "gh-octerse $VERSION" ;;
   help|-h|--help|"")    usage ;;
   *)         echo "gh-octerse: unknown command: $sub" >&2; usage >&2; exit 2 ;;

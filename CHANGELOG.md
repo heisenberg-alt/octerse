@@ -4,6 +4,54 @@ All notable changes to **octerse** are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-01
+
+### Added
+
+- **`gh octerse compress`** — markdown-aware, in-place compressor for
+  `AGENTS.md`, `instructions/*.md`, `copilot-instructions.md`, and any
+  other markdown file in your repo. Reuses the deterministic pipeline
+  from `octerse-shrink` (no LLM) but is structure-preserving:
+  - Fenced code blocks, inline backticks, `[text](url)` links, and
+    `@file/path:line` refs are untouched.
+  - Headings, list bullets (`-`, `*`, `+`, `1.`), and blockquote prefixes
+    keep their structure; only the prose inside gets shrunk.
+  - `<!-- octerse:keep -->` ... `<!-- octerse:end -->` spans pass through
+    byte-for-byte.
+  - First line of the output is a `<!-- octerse-compressed: true -->`
+    marker so re-runs are a safe no-op (`--force` to redo).
+- **Backup + restore.** Every in-place rewrite writes the pristine
+  original to `<file>.original.md` first. `gh octerse compress --restore`
+  rolls back. Round-trip sha256 match is covered by
+  [`tests/compress.bats`](./tests/compress.bats).
+- **Refusals.** `gh octerse compress` declines (exit 1, single-line
+  message) on:
+  - untracked files ("`git add` it first so revert is a one-liner")
+  - existing `<file>.original.md` without `--force`
+  - symlinks
+  - files where `<!-- octerse:keep -->` covers everything
+- **Markdown engine** in `mcp-servers/octerse-shrink/src/markdown.ts`,
+  exposed as `octerse-shrink compress [--stdin] [<file>]`. 17 vitest
+  cases in [`__tests__/markdown.test.ts`](./mcp-servers/octerse-shrink/src/__tests__/markdown.test.ts).
+- 14 bats round-trip / refusal cases in
+  [`tests/compress.bats`](./tests/compress.bats), wired into the existing
+  `test.yml` matrix.
+- README `## Compress` section between `## Spend` and `## Benchmarks`.
+
+### Changed
+
+- `octerse-shrink` (npm) bumped to **0.5.0** — same proxy behaviour as
+  0.3.0, plus the new `compress` subcommand. Tag `v0.5.0` will trigger
+  the npm-publish job (the package.json + tag versions match).
+
+### Notes
+
+- Compress is fully offline. The only command in octerse that touches a
+  network is still `gh octerse spend`. No telemetry.
+- The markdown engine is intentionally conservative — it only edits prose
+  paragraphs, never structure. That's why a 70-line AGENTS.md typically
+  shrinks ~30%, not 80%: the structural lines are left alone.
+
 ## [0.4.0] - 2025-01
 
 ### Added

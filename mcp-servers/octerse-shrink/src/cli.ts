@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 /**
- * octerse-shrink — MCP stdio middleware that compresses tool/prompt/resource
- * description fields. Usage:
+ * octerse-shrink — MCP stdio middleware + markdown compressor.
  *
- *   octerse-shrink [--no-compress] -- <upstream-mcp-cmd> [args...]
+ * Two modes:
+ *
+ *   octerse-shrink [flags] -- <upstream-mcp-cmd> [args...]   (proxy mode)
+ *   octerse-shrink compress [flags] [<file> | --stdin]        (markdown mode)
  *
  * Examples:
  *   octerse-shrink -- npx -y @modelcontextprotocol/server-filesystem /repo
- *   octerse-shrink --no-compress -- python -m my_mcp_server
+ *   octerse-shrink compress AGENTS.md
+ *   octerse-shrink compress --stdin < AGENTS.md > AGENTS.compressed.md
  *
  * Environment:
  *   OCTERSE_SHRINK=0           bypass (passthrough) without removing the wrapper.
@@ -16,9 +19,11 @@
  *   OCTERSE_SHRINK_STATS=1     write compression stats to stderr at SIGINT/exit.
  */
 
+import { readFileSync, writeFileSync } from 'node:fs';
 import { runProxy } from './index.js';
+import { compressMarkdown } from './markdown.js';
 
-const VERSION = '0.3.0';
+const VERSION = '0.5.0';
 
 interface CliArgs {
   passthrough: boolean;
@@ -67,28 +72,120 @@ function parse(argv: string[]): CliArgs {
 
 class CliError extends Error {}
 
-const HELP = `octerse-shrink ${VERSION} — MCP stdio middleware (description-only compression)
+const HELP = `octerse-shrink ${VERSION} — MCP stdio middleware + markdown compressor
 
 Usage:
-  octerse-shrink [flags] -- <upstream-cmd> [args...]
+  octerse-shrink [flags] -- <upstream-cmd> [args...]   (proxy mode)
   octerse-shrink [flags] <upstream-cmd> [args...]
+  octerse-shrink compress [flags] [<file> | --stdin]   (markdown mode)
 
-Flags:
+Proxy flags:
   --no-compress         passthrough mode (still wraps stdio, but doesn't shrink)
   --stats               write compression stats to stderr at exit
+
+Compress flags:
+  --stdin               read from stdin and write to stdout
+  --force               re-compress an already-compressed file
+  --check               exit 0 if input is already compressed, else 1
+
+General:
   -h, --help            this help
   -v, --version         print version and exit
 
 Environment:
-  OCTERSE_SHRINK=0      same as --no-compress
+  OCTERSE_SHRINK=0      same as --no-compress (proxy mode only)
   OCTERSE_SHRINK_BYPASS comma-separated upstream cmds to passthrough
 
 Privacy:
-  Reads only stdin; writes only stdout/stderr. No network, no telemetry.
-  Tool calls (tools/call) and every other RPC are NEVER touched.
+  Reads only stdin/the file you name; writes only stdout/stderr/that file.
+  No network, no telemetry. Tool calls (tools/call) are NEVER touched.
 `;
 
+async function compressMain(rest: string[]): Promise<number> {
+  let stdin = false;
+  let force = false;
+  let check = false;
+  let file: string | null = null;
+
+  for (const a of rest) {
+    if (a === '--stdin') stdin = true;
+    else if (a === '--force') force = true;
+    else if (a === '--check') check = true;
+    else if (a.startsWith('-')) {
+      process.stderr.write(`octerse-shrink compress: unknown flag: ${a}\n`);
+      return 2;
+    } else if (file === null) file = a;
+    else {
+      process.stderr.write(`octerse-shrink compress: too many arguments\n`);
+      return 2;
+    }
+  }
+
+  if (stdin && file !== null) {
+    process.stderr.write(`octerse-shrink compress: --stdin and <file> are mutually exclusive\n`);
+    return 2;
+  }
+  if (!stdin && file === null) {
+    process.stderr.write(`octerse-shrink compress: provide a file or --stdin\n`);
+    return 2;
+  }
+
+  const input = stdin
+    ? await new Promise<string>((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        process.stdin.on('data', (c) => chunks.push(c));
+        process.stdin.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+        process.stdin.on('error', reject);
+      })
+    : readFileSync(file!, 'utf8');
+
+  const r = compressMarkdown(input, { force });
+
+  if (check) {
+    return r.refusal === 'already-compressed' ? 0 : 1;
+  }
+
+  if (r.refusal === 'already-compressed') {
+    process.stderr.write(
+      `octerse-shrink compress: ${stdin ? '(stdin)' : file} already compressed (use --force to redo)\n`,
+    );
+    if (stdin) process.stdout.write(input);
+    return 0;
+  }
+  if (r.refusal === 'keep-span-covers-all') {
+    process.stderr.write(
+      `octerse-shrink compress: <!-- octerse:keep --> covers entire file; nothing to do\n`,
+    );
+    return 1;
+  }
+
+  if (stdin) {
+    process.stdout.write(r.body);
+  } else {
+    writeFileSync(file!, r.body);
+  }
+  process.stderr.write(
+    `octerse-shrink compress: ${r.bytesIn} → ${r.bytesOut} bytes (-${
+      r.bytesIn > 0 ? Math.round(((r.bytesIn - r.bytesOut) / r.bytesIn) * 100) : 0
+    }%)\n`,
+  );
+  return 0;
+}
+
 async function main() {
+  const argv = process.argv.slice(2);
+
+  // Subcommand dispatch — must come before generic flag parsing so that
+  // `octerse-shrink compress --help` is recognised.
+  if (argv[0] === 'compress') {
+    const rest = argv.slice(1);
+    if (rest.includes('--help') || rest.includes('-h')) {
+      process.stdout.write(HELP);
+      process.exit(0);
+    }
+    process.exit(await compressMain(rest));
+  }
+
   let args: CliArgs;
   try {
     args = parse(process.argv.slice(2));

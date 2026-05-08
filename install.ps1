@@ -33,7 +33,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$Version = '0.4.0'
+$Version = '0.5.0'
 $RepoRaw = if ($env:OCTERSE_RAW) { $env:OCTERSE_RAW } else { 'https://raw.githubusercontent.com/heisenberg-alt/octerse/main' }
 
 function Say  ($m) { Write-Host "  $m" }

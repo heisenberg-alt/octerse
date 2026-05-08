@@ -198,6 +198,45 @@ your active-user count, working-days, and prompts-per-user-day pre-filled —
 useful for "what would this cost on a different plan?" what-ifs you can
 share with finance.
 
+## Compress
+
+Octerse can shrink your existing `AGENTS.md` / `instructions/*.md` /
+`copilot-instructions.md` files in place — same compression engine
+`octerse-shrink` uses for MCP descriptions, but markdown-aware so it
+preserves fenced code blocks, links, `@file/path:line` refs, and list
+structure.
+
+```sh
+gh octerse compress AGENTS.md           # rewrite in place, backs up to AGENTS.original.md
+gh octerse compress --dry-run AGENTS.md # preview, write nothing
+gh octerse compress --restore AGENTS.md # undo, restores from .original.md
+gh octerse compress --check AGENTS.md   # exit 0 if already compressed, 1 otherwise
+```
+
+It writes a single `<!-- octerse-compressed: true -->` marker at the top so
+running it twice is a safe no-op (pass `--force` to re-run anyway).
+
+Sections you want untouched are marked with the comment span:
+
+```markdown
+<!-- octerse:keep -->
+This block is preserved byte-for-byte —    spaces    and    all.
+<!-- octerse:end -->
+```
+
+Refusals (each prints a single line and exits 1):
+- file is **untracked by git** — `git add` it first so revert is one command
+- `<file>.original.md` already exists — pass `--force` to overwrite, or
+  `--restore` to undo the prior compress
+- file is a **symlink** — refuses to follow (resolves ambiguity about which
+  file gets the backup)
+- a `<!-- octerse:keep -->` span covers the entire file — nothing to do
+
+Under the hood: `gh octerse compress` shells out to `node
+mcp-servers/octerse-shrink/dist/cli.js compress --stdin` if you're inside
+the octerse source tree, or `npx --yes octerse-shrink@latest compress`
+otherwise. Same deterministic pipeline, no LLM, no network.
+
 ## Benchmarks
 
 10 prompts × 5 modes ([`evals/`](./evals/)). Lower is better.
