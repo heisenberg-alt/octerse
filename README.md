@@ -95,6 +95,7 @@ gh octerse mode lite
 | Copilot PR review | One-line findings: `path:line — sev: issue. fix.` |
 | `/octerse-commit`, `/octerse-review`, `/octerse-help` | Custom prompts, accessed via `chat.promptFiles` |
 | `gh octerse audit` | Flags bloat in your existing `copilot-instructions.md` |
+| `gh octerse spend` | Org Copilot $ this billing period; opens the UBB calculator pre-filled |
 | `gh octerse tips` | Eight-habit Monday-morning checklist |
 
 ### Files written
@@ -136,11 +137,39 @@ For a 50-developer team on Business, that's the difference between hitting
 the included pool and overage. Plug your team's profile into the
 **[Copilot UBB Estimator](https://heisenberg-alt.github.io/usage-based-billing/)** to see the dollar number.
 
+## Spend
+
+`gh octerse spend` turns your org's actual Copilot usage into a printed
+dollar number — no dashboard, no spreadsheet, no telemetry.
+
+```sh
+gh octerse spend --org acme                # this billing period in $
+gh octerse spend --org acme --since 7d     # last 7 days
+gh octerse spend --enterprise acme-ent     # enterprise rollup
+gh octerse spend --org acme --json         # pipe to jq, dashboards, etc.
+gh octerse spend --org acme --calculator   # open the UBB Estimator pre-filled
+```
+
+Reads only `api.github.com` via your existing `gh` token. Writes nothing to
+disk. Required token scopes: `manage_billing:copilot`, `read:org`
+(`gh auth refresh -s manage_billing:copilot,read:org` once is enough). Add
+`manage_billing:enterprise` for `--enterprise`.
+
+`--calculator` builds a deep-link into the
+[UBB Estimator](https://heisenberg-alt.github.io/usage-based-billing/) with
+your active-user count, working-days, and prompts-per-user-day pre-filled —
+useful for "what would this cost on a different plan?" what-ifs you can
+share with finance.
+
 ## Privacy
 
 - **No telemetry.** Octerse never phones home.
-- **No network calls** from any installer or extension subcommand.
-- **`gh octerse stats`** is local-only — reads your git log + a counter file.
+- **`gh octerse spend`** is the only subcommand that calls a network. It hits
+  `api.github.com` exclusively, via your existing `gh` token. Nothing is
+  cached or written to disk.
+- **All other subcommands are offline.** `install`, `audit`, `tips`, `stats`,
+  `mode`, `status` make zero network calls.
+- **`gh octerse stats`** reads only your git log + a local counter file.
 - See [SECURITY.md](./SECURITY.md) for our vulnerability-disclosure policy.
 
 ## Compatibility

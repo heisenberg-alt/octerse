@@ -3,7 +3,7 @@
 # Runs as `gh octerse <subcommand>`.
 set -euo pipefail
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 EXT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 usage() {
@@ -21,6 +21,7 @@ Commands:
   audit                  flag bloat in your existing copilot-instructions.md
   tips                   print the eight-habit Monday-morning checklist
   stats                  estimated savings for this repo (heuristic, local-only)
+  spend [--org <n>]      org Copilot $ this billing period (reads api.github.com)
   version                print version and exit
   help                   this help
 
@@ -39,6 +40,54 @@ c_red()    { printf '\033[31m%s\033[0m' "$*"; }
 c_green()  { printf '\033[32m%s\033[0m' "$*"; }
 c_yellow() { printf '\033[33m%s\033[0m' "$*"; }
 c_dim()    { printf '\033[2m%s\033[0m' "$*"; }
+
+# ---- format / date helpers (used by cmd_spend) ----------------------------
+OCTERSE_GH_API_VERSION="2022-11-28"
+OCTERSE_CALCULATOR_URL="https://heisenberg-alt.github.io/usage-based-billing"
+
+human_int() {
+  # Portable thousands separator for non-negative ints.
+  local n=${1:-0} out=
+  while [ "${#n}" -gt 3 ]; do
+    out=",${n: -3}$out"
+    n=${n:0:${#n}-3}
+  done
+  printf '%s%s' "$n" "$out"
+}
+human_dollars() {
+  # Cents -> "$1,234.56".
+  local cents=${1:-0}
+  local sign=
+  case "$cents" in -*) sign="-"; cents=${cents#-} ;; esac
+  local dollars=$((cents / 100))
+  local frac=$((cents % 100))
+  printf '%s$%s.%02d' "$sign" "$(human_int "$dollars")" "$frac"
+}
+
+# YYYY-MM-DD for "<n> days ago". Portable across BSD (macOS) and GNU date.
+days_ago_iso() {
+  local n="$1"
+  if date -v-1d +%Y-%m-%d >/dev/null 2>&1; then
+    date -v-"${n}"d +%Y-%m-%d
+  else
+    date -d "$n days ago" +%Y-%m-%d
+  fi
+}
+today_iso()      { date -u +%Y-%m-%d; }
+first_of_month() { date -u +%Y-%m-01; }
+day_of_month()   { date -u +%-d; }
+days_in_month()  { cal "$(date -u +%-m)" "$(date -u +%Y)" | awk 'NF{x=$NF} END{print x}'; }
+
+# Plain-text progress bar; usage: progress_bar <pct 0-100> <width>
+progress_bar() {
+  local pct="$1" width="${2:-20}" filled empty
+  (( pct < 0 )) && pct=0
+  (( pct > 100 )) && pct=100
+  filled=$(( pct * width / 100 ))
+  empty=$(( width - filled ))
+  printf '%s%s' "$(printf '%*s' "$filled" '' | tr ' ' '#')" \
+                "$(printf '%*s' "$empty"  '' | tr ' ' '.')"
+}
 
 # ---- subcommands -----------------------------------------------------------
 cmd_install() {
@@ -203,7 +252,264 @@ cmd_stats() {
 EOF
 }
 
+# ---- spend (org Copilot $ this period; reads api.github.com only) ---------
+
+spend_usage() {
+  cat <<'EOF'
+gh octerse spend — print this billing period's Copilot $ for an org or enterprise.
+
+Usage:
+  gh octerse spend [--org <name> | --enterprise <name>] [flags]
+
+Flags:
+  --org <name>          target organization
+  --enterprise <name>   target enterprise (instead of an org)
+  --since <window>      time window, e.g. 7d, 30d (default: current billing period)
+  --json                machine-readable output
+  --calculator          open the UBB estimator with these numbers pre-filled
+  --project             alias for --calculator
+  -h, --help            this help
+
+Reads only api.github.com. Writes nothing to disk.
+Required token scopes:  manage_billing:copilot, read:org
+                       (+ manage_billing:enterprise for --enterprise)
+EOF
+}
+
+spend_preflight() {
+  local ent="$1" status_out missing=()
+  command -v gh >/dev/null 2>&1 || {
+    echo "octerse spend: needs the gh CLI (https://cli.github.com)" >&2; return 1; }
+  command -v jq >/dev/null 2>&1 || {
+    echo "octerse spend: needs jq (brew install jq)" >&2; return 1; }
+  if ! status_out=$(gh auth status -t 2>&1); then
+    echo "octerse spend: not logged in to gh." >&2
+    echo "  run: gh auth login" >&2; return 1
+  fi
+  local needed=("read:org" "manage_billing:copilot")
+  [[ -n "$ent" ]] && needed+=("manage_billing:enterprise")
+  for scope in "${needed[@]}"; do
+    grep -q "'$scope'" <<<"$status_out" || missing+=("$scope")
+  done
+  if (( ${#missing[@]} )); then
+    local joined; joined=$(IFS=,; echo "${missing[*]}")
+    echo "octerse spend: missing token scope(s): ${missing[*]}" >&2
+    echo "  run: gh auth refresh -s $joined" >&2
+    return 1
+  fi
+}
+
+spend_api() {
+  # Print body to stdout; on non-200 print body to stderr and return non-zero.
+  local path="$1"
+  gh api -H "X-GitHub-Api-Version: $OCTERSE_GH_API_VERSION" "$path"
+}
+
+spend_explain_error() {
+  local body="$1" scope="$2" what="$3" msg
+  msg=$(jq -r '.message // empty' <<<"$body" 2>/dev/null || true)
+  case "$msg" in
+    "Not Found"|"")
+      echo "octerse spend: $what endpoint not found for $scope" >&2
+      echo "  - is the name spelled correctly?" >&2
+      echo "  - does the account have a Copilot subscription?" >&2 ;;
+    *requires*"administrator"*|*"must be an owner"*)
+      echo "octerse spend: $what needs admin/owner role on $scope" >&2 ;;
+    *)
+      echo "octerse spend: $what failed: $msg" >&2 ;;
+  esac
+}
+
+spend_calculator_url() {
+  # All args are query-string values. URL-safe by construction (numbers + slug).
+  local p="$1" n="$2" d="$3" l="$4" m="$5" h="$6" pw="$7"
+  printf '%s/#/calculator?p=%s&n=%s&d=%s&promo=0&l=%s&m=%s&h=%s&pw=%s' \
+    "$OCTERSE_CALCULATOR_URL" "$p" "$n" "$d" "$l" "$m" "$h" "$pw"
+}
+
+spend_open_url() {
+  local url="$1"
+  if command -v open >/dev/null 2>&1; then open "$url"
+  elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$url"
+  else echo "$url"
+  fi
+}
+
+cmd_spend() {
+  local org="" ent="" since="" want_json=0 want_calc=0
+  while (( $# )); do
+    case "$1" in
+      --org)              org="${2:?--org needs a value}"; shift 2 ;;
+      --org=*)            org="${1#--org=}"; shift ;;
+      --enterprise)       ent="${2:?--enterprise needs a value}"; shift 2 ;;
+      --enterprise=*)     ent="${1#--enterprise=}"; shift ;;
+      --since)            since="${2:?--since needs a value}"
+                          [[ "$since" =~ ^[0-9]+d$ ]] || { echo "octerse spend: --since must be like 7d, 30d (got: $since)" >&2; return 2; }
+                          shift 2 ;;
+      --since=*)          since="${1#--since=}"
+                          [[ "$since" =~ ^[0-9]+d$ ]] || { echo "octerse spend: --since must be like 7d, 30d (got: $since)" >&2; return 2; }
+                          shift ;;
+      --json)             want_json=1; shift ;;
+      --calculator|--project) want_calc=1; shift ;;
+      -h|--help)          spend_usage; return 0 ;;
+      *) echo "octerse spend: unknown flag: $1" >&2; spend_usage >&2; return 2 ;;
+    esac
+  done
+
+  if [[ -z "$org" && -z "$ent" ]]; then
+    echo "octerse spend: pass --org <name> or --enterprise <name>" >&2
+    return 2
+  fi
+  if [[ -n "$org" && -n "$ent" ]]; then
+    echo "octerse spend: pick one of --org or --enterprise, not both" >&2
+    return 2
+  fi
+
+  spend_preflight "$ent" || return 1
+
+  # Build period window
+  local since_iso until_iso
+  until_iso=$(today_iso)
+  if [[ -n "$since" ]]; then
+    since_iso=$(days_ago_iso "${since%d}")
+  else
+    since_iso=$(first_of_month)
+  fi
+
+  local scope_label metrics_path billing_path
+  if [[ -n "$ent" ]]; then
+    scope_label="enterprise:$ent"
+    metrics_path="/enterprises/$ent/copilot/metrics?since=$since_iso&until=$until_iso"
+    billing_path="/enterprises/$ent/settings/billing/usage?year=$(date -u +%Y)&month=$(date -u +%-m)"
+  else
+    scope_label="org:$org"
+    metrics_path="/orgs/$org/copilot/metrics?since=$since_iso&until=$until_iso"
+    billing_path="/organizations/$org/settings/billing/usage?year=$(date -u +%Y)&month=$(date -u +%-m)"
+  fi
+
+  local metrics_json billing_json
+  if ! metrics_json=$(spend_api "$metrics_path" 2>/tmp/octerse-spend-err.$$); then
+    spend_explain_error "$(cat /tmp/octerse-spend-err.$$)" "$scope_label" "copilot metrics"
+    rm -f /tmp/octerse-spend-err.$$; return 1
+  fi
+  if ! billing_json=$(spend_api "$billing_path" 2>/tmp/octerse-spend-err.$$); then
+    spend_explain_error "$(cat /tmp/octerse-spend-err.$$)" "$scope_label" "billing usage"
+    rm -f /tmp/octerse-spend-err.$$
+    # billing endpoint is the more flaky one — degrade gracefully
+    billing_json='{"usageItems":[]}'
+  fi
+  rm -f /tmp/octerse-spend-err.$$
+
+  # ---- extract (defensive: API shape is in preview, schema may shift) -----
+  # metrics is an array of daily summaries; we want latest active users + sum of chats
+  local active_users chat_turns
+  active_users=$(jq -r '
+    if type=="array" and length>0
+    then (.[-1].total_active_users // .[-1].totalActiveUsers // 0)
+    else 0 end' <<<"$metrics_json")
+  chat_turns=$(jq -r '
+    if type=="array"
+    then [ .[] | (.copilot_ide_chat // .copilotIdeChat // {}) |
+           (.editors // []) | .[]? | (.models // []) | .[]? |
+           (.total_chats // .totalChats // 0) ] | add // 0
+    else 0 end' <<<"$metrics_json")
+
+  # billing is { usageItems: [...] } where each item has product / sku / netAmount / quantity
+  local total_cents premium_qty plan_slug
+  total_cents=$(jq -r '
+    [(.usageItems // .usage_items // [])[]
+      | select((.product // "") | ascii_downcase | contains("copilot"))
+      | ((.netAmount // .net_amount // .grossAmount // .gross_amount // 0) * 100)
+    ] | add // 0 | floor' <<<"$billing_json")
+  premium_qty=$(jq -r '
+    [(.usageItems // .usage_items // [])[]
+      | select(((.sku // "") | ascii_downcase) | test("premium|request"))
+      | (.quantity // 0)
+    ] | add // 0' <<<"$billing_json")
+  plan_slug=$(jq -r '
+    [(.usageItems // .usage_items // [])[]
+      | (.sku // "") | ascii_downcase
+    ] | map(select(test("enterprise|business"))) | .[0] // ""' <<<"$billing_json")
+  case "$plan_slug" in
+    *enterprise*) plan_slug="enterprise" ;;
+    *)            plan_slug="business" ;;
+  esac
+
+  # ---- compute projection -------------------------------------------------
+  local day dim projected_cents
+  day=$(day_of_month)
+  dim=$(days_in_month)
+  if (( day > 0 )); then
+    projected_cents=$(awk -v c="$total_cents" -v d="$day" -v dim="$dim" \
+      'BEGIN { printf "%d", (c / d) * dim }')
+  else
+    projected_cents="$total_cents"
+  fi
+
+  # turns ÷ users ÷ days for the calculator deep-link
+  local pw=0
+  if (( active_users > 0 && day > 0 )); then
+    pw=$(awk -v t="$chat_turns" -v u="$active_users" -v d="$day" \
+      'BEGIN { printf "%d", (t/u/d)+0.5 }')
+  fi
+  # naive default tier mix (50/30/15) until the metrics API exposes it stably
+  local light_pct=50 mid_pct=35 heavy_pct=15
+
+  # ---- render -------------------------------------------------------------
+  if (( want_json )); then
+    jq -n \
+      --arg scope "$scope_label" \
+      --arg since "$since_iso" \
+      --arg until "$until_iso" \
+      --argjson active_users "${active_users:-0}" \
+      --argjson chat_turns "${chat_turns:-0}" \
+      --argjson premium_requests "${premium_qty:-0}" \
+      --argjson total_cents "${total_cents:-0}" \
+      --argjson projected_cents "${projected_cents:-0}" \
+      --argjson day "$day" \
+      --argjson days_in_month "$dim" \
+      --arg plan "$plan_slug" \
+      --argjson prompts_per_user_day "$pw" \
+      '{scope:$scope, period:{since:$since, until:$until, day_of_month:$day, days_in_month:$days_in_month},
+        active_users:$active_users, chat_turns:$chat_turns, premium_requests:$premium_requests, plan:$plan,
+        spend_cents:$total_cents, projected_month_end_cents:$projected_cents,
+        prompts_per_user_day:$prompts_per_user_day}'
+  else
+    local pct=0
+    if (( total_cents > 0 && projected_cents > 0 )); then
+      pct=$(awk -v c="$total_cents" -v p="$projected_cents" \
+        'BEGIN { if (p>0) printf "%d", (c*100/p)+0.5; else print 0 }')
+    fi
+    cat <<EOF
+
+  Octerse spend  ·  $scope_label  ·  $since_iso to $until_iso
+
+    Active Copilot users        $(human_int "$active_users")
+    Chat turns this period      $(human_int "$chat_turns")
+    Plan                        $plan_slug
+
+    \$ this period               $(human_dollars "$total_cents")
+    Projected month-end         $(human_dollars "$projected_cents")  $(c_dim '(linear extrapolation)')
+    Burn-to-projection          ${pct}%  $(progress_bar "$pct" 20)
+
+  $(c_dim 'Calculator deep-link:') gh octerse spend --calculator
+  $(c_dim 'Numbers come from:')    api.github.com (no telemetry, no persistence)
+
+EOF
+  fi
+
+  if (( want_calc )); then
+    local url
+    url=$(spend_calculator_url "$plan_slug" "$active_users" "$dim" \
+          "$light_pct" "$mid_pct" "$heavy_pct" "$pw")
+    spend_open_url "$url"
+  fi
+}
+
 # ---- dispatch --------------------------------------------------------------
+# Skip when sourced (lets tests load helper functions without executing).
+(return 0 2>/dev/null) && return 0
+
 sub="${1:-help}"; shift || true
 case "$sub" in
   install)   cmd_install "$@" ;;
@@ -213,6 +519,7 @@ case "$sub" in
   audit)     cmd_audit ;;
   tips)      cmd_tips ;;
   stats)     cmd_stats "$@" ;;
+  spend)     cmd_spend "$@" ;;
   version|--version|-v) echo "gh-octerse $VERSION" ;;
   help|-h|--help|"")    usage ;;
   *)         echo "gh-octerse: unknown command: $sub" >&2; usage >&2; exit 2 ;;

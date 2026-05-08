@@ -154,8 +154,27 @@ not the file reads:
 
 ## Make spend visible
 
+The fastest path from "we should watch UBB" to "here's the dollar number" is
+the `gh octerse spend` subcommand:
+
+```sh
+gh octerse spend --org acme                  # this billing period in $
+gh octerse spend --org acme --since 7d       # last 7 days
+gh octerse spend --enterprise acme-ent       # enterprise rollup
+gh octerse spend --org acme --json           # pipe to jq, dashboards, etc.
+gh octerse spend --org acme --calculator     # open the UBB Estimator pre-filled
+```
+
+It calls only `api.github.com`, writes nothing to disk, and needs the
+`manage_billing:copilot` and `read:org` token scopes (`gh auth refresh -s
+manage_billing:copilot,read:org` once is enough). For enterprise rollups, add
+`manage_billing:enterprise`.
+
+Beyond the CLI, three session-level layers stay useful:
+
 | Layer | What it shows |
 |---|---|
+| `gh octerse spend` | Org $ this period, projection to month-end, deep-link into the UBB calculator. |
 | `/context` | Real-time window breakdown. `/compact` when buffer climbs. |
 | `/usage` | Session-level: tokens / model / duration / files. End-of-task habit. |
 | OTel traces | `invoke_agent`, `chat`, `execute_tool` spans with token counts. Pipe into Azure Monitor / Grafana. |
