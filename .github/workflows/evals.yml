@@ -50,6 +50,9 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
+          # Tag pushes check out a detached HEAD, so the action can't infer
+          # a base branch. Pin it explicitly.
+          base: main
           commit-message: 'chore(evals): refresh benchmarks for ${{ github.ref_name }}'
           title: 'chore(evals): refresh benchmarks for ${{ github.ref_name }}'
           body: |
