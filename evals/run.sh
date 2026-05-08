@@ -83,11 +83,27 @@ run_pair() {
   if (( MODE_LIVE )); then
     case "$BACKEND" in
       copilot)
-        # gh copilot suggest reads stdin; we prepend the mode instructions.
-        # Falls back to gh copilot if `suggest` isn't a subcommand.
-        printf '%s\n\n%s\n' "$instructions" "$prompt" \
-          | gh copilot suggest 2>/dev/null > "$out_path" \
-          || printf 'EVAL_LIVE_BACKEND_UNAVAILABLE\n' > "$out_path"
+        # Two-shape probing: the *new* Copilot CLI (gh ≥ 2.81) takes -p as a
+        # non-interactive flag; the legacy `gh copilot suggest` extension
+        # (now sunset) read stdin. We try the new shape first because that's
+        # what every current install will have.
+        local combined
+        combined="$(printf '%s\n\n%s\n' "$instructions" "$prompt")"
+        if gh copilot -- --allow-all-tools -p "$combined" 2>/dev/null \
+             | sed '/^Total usage est:/,$d' \
+             > "$out_path"
+        then
+          :
+        elif printf '%s' "$combined" | gh copilot suggest 2>/dev/null > "$out_path"
+        then
+          :
+        else
+          printf 'EVAL_LIVE_BACKEND_UNAVAILABLE\n' > "$out_path"
+        fi
+        # If the call succeeded but produced an empty file, treat as unavailable.
+        if [[ ! -s "$out_path" ]]; then
+          printf 'EVAL_LIVE_BACKEND_UNAVAILABLE\n' > "$out_path"
+        fi
         ;;
       claude)
         printf '%s\n\n%s\n' "$instructions" "$prompt" \
