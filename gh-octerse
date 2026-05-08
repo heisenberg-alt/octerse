@@ -24,7 +24,7 @@ Commands:
   version                print version and exit
   help                   this help
 
-ROI calculator:  https://sameerankalgi.github.io/usage-based-billing/
+ROI calculator:  https://heisenberg-alt.github.io/usage-based-billing/
 EOF
 }
 
@@ -80,8 +80,7 @@ cmd_status() {
 }
 
 # Inspect .github/copilot-instructions.md for common bloat patterns.
-# Heuristics adapted from the "Keep custom instructions lean" lever
-# (Davis 2026, Token Optimization for Copilot CLI).
+# Heuristics adapted from the "Keep custom instructions lean" lever.
 cmd_audit() {
   require_repo; cd "$(repo_root)"
   local f=".github/copilot-instructions.md"
@@ -168,7 +167,7 @@ cmd_tips() {
                               context cost    visibility
 
   Full playbook:  https://github.com/heisenberg-alt/octerse/blob/main/docs/playbook.md
-  ROI calculator: https://sameerankalgi.github.io/usage-based-billing/
+  ROI calculator: https://heisenberg-alt.github.io/usage-based-billing/
 
 EOF
 }
@@ -199,7 +198,7 @@ cmd_stats() {
   baseline token reductions documented in docs/playbook.md.
 
   For a real \$ estimate based on your team's profile, plug your numbers into
-  https://sameerankalgi.github.io/usage-based-billing/
+  https://heisenberg-alt.github.io/usage-based-billing/
 
 EOF
 }

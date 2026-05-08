@@ -36,7 +36,7 @@ framework — see [the playbook](./docs/playbook.md) — that routinely cuts
 **Same accuracy. ~65% fewer output tokens.**
 
 Estimate the dollar impact for your team in the
-**[Copilot UBB Estimator →](https://sameerankalgi.github.io/usage-based-billing/)**.
+**[Copilot UBB Estimator →](https://heisenberg-alt.github.io/usage-based-billing/)**.
 
 ## Install
 
@@ -134,7 +134,7 @@ and admin governance.
 
 For a 50-developer team on Business, that's the difference between hitting
 the included pool and overage. Plug your team's profile into the
-**[Copilot UBB Estimator](https://sameerankalgi.github.io/usage-based-billing/)** to see the dollar number.
+**[Copilot UBB Estimator](https://heisenberg-alt.github.io/usage-based-billing/)** to see the dollar number.
 
 ## Privacy
 
@@ -161,11 +161,6 @@ instruction payloads must include a Copilot-Chat before/after in the PR
 description.
 
 ## Acknowledgements
-
-The five-lever framework summarized in [docs/playbook.md](./docs/playbook.md)
-adapts material from Joshua Davis (Microsoft Professional Services),
-*Token Optimization — Getting more from every token in GitHub Copilot CLI*,
-April 2026, with attribution.
 
 Inspired by [``](https://github.com//) — Octerse
 is its GitHub-Copilot-native cousin.

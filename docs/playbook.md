@@ -4,10 +4,6 @@
 > model emits. The five-lever framework below covers the **input** side:
 > context, prompts, model choice, scope, and measurement. Together they
 > compound to ~70% lower token spend.
->
-> Adapted from Joshua Davis (Microsoft Professional Services), *Token
-> Optimization — Getting more from every token in GitHub Copilot CLI*,
-> April 2026. Used with attribution.
 
 ## Why it matters now
 
@@ -24,7 +20,7 @@ incentives align around **leaner harnesses, more sub-agent hand-offs, real
 cost visibility**.
 
 Estimate the dollar impact for your team in the
-**[Copilot UBB Estimator →](https://sameerankalgi.github.io/usage-based-billing/)**.
+**[Copilot UBB Estimator →](https://heisenberg-alt.github.io/usage-based-billing/)**.
 
 ## What actually counts as tokens
 

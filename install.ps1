@@ -156,7 +156,7 @@ $vsLine = if ($SkipVscode) { 'skipped' } else { '.vscode/settings.json' }
     2. In Copilot Chat, try /octerse-help for a quick reference.
     3. Switch modes any time:  gh octerse mode lite
 
-  ROI calculator:  https://sameerankalgi.github.io/usage-based-billing/
+  ROI calculator:  https://heisenberg-alt.github.io/usage-based-billing/
   Uninstall:       irm $RepoRaw/install.ps1 | iex; octerse-install -Uninstall
 
 "@ | Write-Host

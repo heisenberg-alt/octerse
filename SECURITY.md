@@ -23,6 +23,6 @@ to acknowledge within 72 hours.
 
 ## What's not in scope
 
-- Behavior of GitHub Copilot itself (report to GitHub)
-- Behavior of VS Code (report to Microsoft)
+- Behavior of GitHub Copilot itself (report upstream to GitHub)
+- Behavior of the editor or IDE (report to its maintainers)
 - Cosmetic phrasing in instruction payloads
