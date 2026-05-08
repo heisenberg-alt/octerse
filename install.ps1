@@ -31,7 +31,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Version = '0.1.0'
-$RepoRaw = if ($env:OCTERSE_RAW) { $env:OCTERSE_RAW } else { 'https://raw.githubusercontent.com/OWNER/octerse/main' }
+$RepoRaw = if ($env:OCTERSE_RAW) { $env:OCTERSE_RAW } else { 'https://raw.githubusercontent.com/heisenberg-alt/octerse/main' }
 
 function Say  ($m) { Write-Host "  $m" }
 function OK   ($m) { Write-Host "  " -NoNewline; Write-Host "✓ " -ForegroundColor Green -NoNewline; Write-Host $m }

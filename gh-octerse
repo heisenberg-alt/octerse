@@ -47,7 +47,7 @@ cmd_install() {
   if [[ -f "$script" ]]; then
     OCTERSE_LOCAL_SRC="$EXT_DIR" bash "$script" "$@"
   else
-    curl -fsSL "https://raw.githubusercontent.com/OWNER/octerse/main/install.sh" | bash -s -- "$@"
+    curl -fsSL "https://raw.githubusercontent.com/heisenberg-alt/octerse/main/install.sh" | bash -s -- "$@"
   fi
 }
 
@@ -167,7 +167,7 @@ cmd_tips() {
                               ─────   ─────   ─────
                               context cost    visibility
 
-  Full playbook:  https://github.com/OWNER/octerse/blob/main/docs/playbook.md
+  Full playbook:  https://github.com/heisenberg-alt/octerse/blob/main/docs/playbook.md
   ROI calculator: https://sameerankalgi.github.io/usage-based-billing/
 
 EOF

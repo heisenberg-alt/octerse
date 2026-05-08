@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # octerse — install GitHub Copilot terse-mode into the current repo.
-# https://github.com/OWNER/octerse · MIT
+# https://github.com/heisenberg-alt/octerse · MIT
 set -euo pipefail
 
 VERSION="0.1.0"
-REPO_RAW="${OCTERSE_RAW:-https://raw.githubusercontent.com/OWNER/octerse/main}"
+REPO_RAW="${OCTERSE_RAW:-https://raw.githubusercontent.com/heisenberg-alt/octerse/main}"
 
 # ---- args ------------------------------------------------------------------
 MODE="full"

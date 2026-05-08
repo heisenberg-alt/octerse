@@ -8,4 +8,4 @@ Conventional Commits for commit messages. One-line PR review findings.
 
 For per-mode rules, the source of truth is `.github/copilot-instructions.md`.
 
-— [octerse](https://github.com/OWNER/octerse)
+— [octerse](https://github.com/heisenberg-alt/octerse)

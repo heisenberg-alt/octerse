@@ -42,13 +42,13 @@ Estimate the dollar impact for your team in the
 
 ```sh
 # macOS / Linux / WSL / Git Bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/octerse/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/heisenberg-alt/octerse/main/install.sh | bash
 
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/OWNER/octerse/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/heisenberg-alt/octerse/main/install.ps1 | iex
 ```
 
-> **Note:** replace `OWNER` with the GitHub user/org that hosts this repo.
+
 
 The installer detects your repo, writes `.github/copilot-instructions.md`,
 merges `.vscode/settings.json`, and (optionally) drops `AGENTS.md`. Pass
@@ -58,7 +58,7 @@ merges `.vscode/settings.json`, and (optionally) drops `AGENTS.md`. Pass
 ### Or via the `gh` CLI
 
 ```sh
-gh extension install OWNER/octerse
+gh extension install heisenberg-alt/octerse
 gh octerse install --mode full
 ```
 
@@ -67,7 +67,7 @@ gh octerse install --mode full
 ```sh
 # In any git repo
 curl -o .github/copilot-instructions.md \
-  https://raw.githubusercontent.com/OWNER/octerse/main/instructions/full.md
+  https://raw.githubusercontent.com/heisenberg-alt/octerse/main/instructions/full.md
 ```
 
 ## Modes
