@@ -1,0 +1,27 @@
+First, I would investigate the model selection patterns. Many teams overspend
+on Copilot Premium because developers default to the highest-tier model
+(such as Claude Opus or GPT-4.1) for every task, when in reality a
+mid-tier model would handle 70% of the routine work just as well.
+Encouraging the use of `/model` mid-session and setting team defaults
+through `chat.modelSelection` in `.vscode/settings.json` can substantially
+reduce the per-prompt cost. You should pull a histogram of model usage by
+developer over the last 30 days and look for outliers.
+
+Second, I would look at context size and discipline. The Copilot Chat
+window includes everything currently in context — open files, attached
+folders, recent commands — and many developers don't run `/clear` between
+unrelated tasks. This means tokens are being paid for on irrelevant context
+on every turn. The fix here is education: a five-minute team meeting
+covering `/clear`, `/compact`, and `@file:line` references is usually
+enough to move the needle by 20–30%.
+
+Third, and most subtle, I would investigate prompt patterns. A prompt like
+"can you help me debug this?" produces a verbose, exploratory response.
+A prompt like "give me the one-line fix for this off-by-one in
+foo.ts:42-58" produces a five-token answer. The difference compounds
+across every developer, every day. Establishing a team prompt-discipline
+guide and showing concrete before/after examples is the highest-leverage
+single thing a manager can do.
+
+In summary: model selection, context hygiene, and prompt discipline —
+in roughly that order of impact for a 50-developer team.

@@ -1,0 +1,3 @@
+```python
+out = [x.name.upper() for x in items if x.active]
+```

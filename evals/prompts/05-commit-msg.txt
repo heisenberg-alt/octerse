@@ -1,0 +1,6 @@
+Review this commit message:
+
+    feat: added some changes to the user authentication flow including
+    new password reset functionality and updated the login form
+
+Suggest a better one in Conventional Commits format.

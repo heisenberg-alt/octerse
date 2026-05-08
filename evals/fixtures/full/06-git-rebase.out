@@ -1,0 +1,2 @@
+`squash` — combines msgs, opens editor.
+`fixup` — combines, drops the squashed commit's msg.

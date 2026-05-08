@@ -1,0 +1,2 @@
+Write a TypeScript function `parseDuration(s: string): number` that parses
+strings like "5m", "2h", "30s" into milliseconds. Reject anything else.

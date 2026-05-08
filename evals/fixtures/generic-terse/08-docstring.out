@@ -1,0 +1,11 @@
+```python
+"""Return the SHA-256 hex digest of the file at `path`.
+
+Args:
+    path: Filesystem path to the file.
+Returns:
+    Lowercase 64-char hex digest.
+Raises:
+    FileNotFoundError: If `path` does not exist.
+"""
+```

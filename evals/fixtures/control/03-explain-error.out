@@ -1,0 +1,17 @@
+The cause is that floating-point arithmetic in IEEE 754 cannot exactly
+represent decimal fractions like 0.1 and 0.2 — they're stored as the
+nearest binary approximation, and adding the approximations gives
+0.30000000000000004 rather than 0.3. This is a fundamental property
+of binary floating-point and applies to virtually every language.
+
+The one-line fix is to compare with a tolerance instead of equality:
+
+```python
+assert abs((0.1 + 0.2) - 0.3) < 1e-9
+```
+
+Or, even better for pytest, use `pytest.approx`:
+
+```python
+assert (0.1 + 0.2) == pytest.approx(0.3)
+```

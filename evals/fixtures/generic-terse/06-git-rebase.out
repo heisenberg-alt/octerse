@@ -1,0 +1,2 @@
+Both combine with the parent commit. `squash` opens an editor for
+the merged message; `fixup` silently keeps only the parent's message.

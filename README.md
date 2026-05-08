@@ -198,6 +198,29 @@ your active-user count, working-days, and prompts-per-user-day pre-filled —
 useful for "what would this cost on a different plan?" what-ifs you can
 share with finance.
 
+## Benchmarks
+
+10 prompts × 5 modes ([`evals/`](./evals/)). Lower is better.
+The honest comparison is **octerse vs `"be terse"`** — anyone can tell a model
+to be brief; the question is whether mode-specific instructions buy you
+anything beyond that. Numbers below come from stub fixtures so the table is
+deterministic and reproducible in CI; run `bash evals/run.sh --live` to
+generate real numbers for your model.
+
+<!-- BENCHMARK-TABLE-START -->
+
+| Mode | Tokens out (10 prompts) | Median per prompt | Savings vs control |
+|---|---|---|---|
+| control (no instructions) | 1834 | 170 | — |
+| "be terse" baseline | 395 | 35 | +78.5% |
+| octerse — lite | 298 | 25 | +83.8% |
+| octerse — full | 231 | 19 | +87.4% |
+| octerse — ultra | 141 | 12 | +92.3% |
+
+_Token counts are char/4 estimates; treat as ratios across modes, not as exact API token billing._  
+_Run: `.runs/20260508T143830Z` · 50 pairs._
+<!-- BENCHMARK-TABLE-END -->
+
 ## Privacy
 
 - **No telemetry.** Octerse never phones home.

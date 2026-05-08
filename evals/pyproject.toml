@@ -1,0 +1,17 @@
+[project]
+name = "octerse-evals"
+version = "0.4.0"
+description = "Reproducible eval harness for the octerse Copilot-instruction modes."
+license = { text = "MIT" }
+authors = [{ name = "heisenberg-alt" }]
+readme = "README.md"
+requires-python = ">=3.10"
+# Zero runtime deps on purpose — the harness uses only the stdlib so it
+# runs anywhere Python 3.10+ is installed.
+dependencies = []
+
+[tool.octerse-evals]
+prompts = "prompts/"
+modes = "modes/"
+fixtures = "fixtures/"
+output = "results.json"

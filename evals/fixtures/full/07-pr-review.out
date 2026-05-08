@@ -1,0 +1,2 @@
+no zero-check on `b`.
+`if (b === 0) throw new RangeError('div/0');`

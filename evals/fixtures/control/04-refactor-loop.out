@@ -1,0 +1,12 @@
+You can refactor that loop into a single list comprehension by
+combining the conditional filter (`if x.active`) with the
+expression (`x.name.upper()`) like so:
+
+```python
+out = [x.name.upper() for x in items if x.active]
+```
+
+This produces an identical list to the original loop. It's also
+considered more idiomatic Python and is generally a few percent
+faster because the list growth is handled by the runtime rather
+than per-element `.append()` calls.

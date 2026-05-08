@@ -1,0 +1,4 @@
+Bug: missing `b === 0` guard.
+```js
+if (b === 0) throw new RangeError('Division by zero');
+```

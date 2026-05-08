@@ -1,0 +1,12 @@
+Looking at the diff, the changes increase the request timeout from
+30 seconds to 60 seconds and bump the retry count from 3 to 5.
+These are both reliability tuning parameters, so a single subject
+covering them both would be appropriate. Per the Conventional
+Commits spec and the 50-character subject limit, I'd suggest:
+
+```
+chore: increase timeout and retries for reliability
+```
+
+That comes in at 49 characters and accurately describes the
+intent of the change.

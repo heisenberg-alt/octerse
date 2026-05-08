@@ -1,0 +1,1 @@
+In a `git rebase -i` session, what does `fixup` do versus `squash`?

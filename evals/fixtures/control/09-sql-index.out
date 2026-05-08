@@ -1,0 +1,21 @@
+The query is doing a sequential scan over the entire `orders` table,
+filtering by `customer_id`, then sorting the matching rows by
+`created_at` and returning the top 10. With a large `orders` table,
+this gets very slow.
+
+The right index here is a composite covering both columns in the
+right order:
+
+```sql
+CREATE INDEX idx_orders_customer_created
+  ON orders (customer_id, created_at DESC);
+```
+
+Why this order: PostgreSQL/MySQL/etc. will use the index to seek to
+the customer's rows directly (the equality predicate goes first),
+and because `created_at DESC` is part of the index, it can read the
+top 10 in order without a separate sort step.
+
+Trade-off: every INSERT/UPDATE on `orders` now has to maintain this
+index, which adds a small amount of write overhead. On a write-heavy
+table this can matter; on a read-heavy table it's negligible.

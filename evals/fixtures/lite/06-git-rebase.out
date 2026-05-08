@@ -1,0 +1,2 @@
+Both fold into the parent. `squash` lets you edit the merged message;
+`fixup` keeps only the parent's, no editor.

@@ -1,0 +1,4 @@
+1. Model selection — many devs default to the top tier when mid-tier suffices.
+   Pull model-usage histogram and surface outliers.
+2. Context size — `/clear` discipline. Most teams pay for stale context.
+3. Prompt patterns — vague prompts → verbose answers. Push @file:line refs.

@@ -1,0 +1,6 @@
+Refactor this Python loop to a list comprehension:
+
+    out = []
+    for x in items:
+        if x.active:
+            out.append(x.name.upper())

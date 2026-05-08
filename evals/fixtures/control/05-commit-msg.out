@@ -1,0 +1,18 @@
+The original commit message has a few issues: it uses past tense
+("added") rather than the imperative mood that Conventional Commits
+expects, the subject line is much too long (it spills over multiple
+lines), and it conflates two distinct changes (a new feature and a
+form update) into a single commit.
+
+A better Conventional Commits format would be:
+
+```
+feat(auth): add password reset flow
+
+- new /reset endpoint with email-token verification
+- updates the login form to surface a 'Forgot password?' link
+```
+
+Ideally you'd split the form change into its own commit (e.g.
+`feat(auth): surface password-reset link on login`) but if the
+two are tightly coupled, the message above is acceptable.

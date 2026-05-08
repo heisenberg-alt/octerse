@@ -1,0 +1,8 @@
+A SQL query takes 12 seconds:
+
+    SELECT * FROM orders
+    WHERE customer_id = 42
+    ORDER BY created_at DESC
+    LIMIT 10;
+
+Suggest one index that should fix it. State the trade-off.

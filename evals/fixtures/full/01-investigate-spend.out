@@ -1,0 +1,3 @@
+1. Model mix — pull histogram, flag tier-1 outliers.
+2. `/clear` discipline — stale context = 20-30% waste.
+3. Prompt patterns — `@file:line` vs prose.

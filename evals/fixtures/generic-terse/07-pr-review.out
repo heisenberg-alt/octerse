@@ -1,0 +1,5 @@
+Bug: no zero-check on `b`. JS returns `Infinity`/`NaN` silently.
+
+```js
+if (b === 0) throw new RangeError('Division by zero');
+```

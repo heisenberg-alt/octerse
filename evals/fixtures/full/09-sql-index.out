@@ -1,0 +1,2 @@
+`(customer_id, created_at DESC)` composite.
+Trade-off: writes get slower.

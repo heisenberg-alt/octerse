@@ -1,0 +1,6 @@
+Summarize this diff in one Conventional Commit subject (≤50 chars):
+
+    -    timeout: 30
+    +    timeout: 60
+    -    retries: 3
+    +    retries: 5

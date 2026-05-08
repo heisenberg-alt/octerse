@@ -1,0 +1,65 @@
+name: evals
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'why are you re-running benchmarks?'
+        required: false
+        default: 'manual refresh'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh-benchmarks:
+    name: refresh benchmark table
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: run eval matrix (stub mode)
+        run: bash evals/run.sh
+
+      - name: tabulate results
+        run: python3 evals/measure.py
+
+      - name: render benchmark table
+        run: python3 evals/report.py
+
+      - name: detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- README.md evals/results.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: open pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore(evals): refresh benchmarks for ${{ github.ref_name }}'
+          title: 'chore(evals): refresh benchmarks for ${{ github.ref_name }}'
+          body: |
+            Triggered by tag `${{ github.ref_name }}`.
+
+            This PR refreshes `README.md` and `evals/results.json` from the
+            stub-mode eval matrix. Review the numbers and merge if they look
+            reasonable. Run `bash evals/run.sh --live` locally if you want
+            to refresh from a real LLM instead.
+          branch: chore/evals-refresh-${{ github.ref_name }}
+          add-paths: |
+            README.md
+            evals/results.json

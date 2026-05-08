@@ -1,0 +1,3 @@
+```ts
+export const parseDuration=(s:string)=>{const m=/^(\d+)(s|m|h)$/.exec(s);if(!m)throw 0;return +m[1]*{s:1e3,m:6e4,h:3.6e6}[m[2]]!}
+```

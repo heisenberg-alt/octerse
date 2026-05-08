@@ -4,6 +4,41 @@ All notable changes to **octerse** are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-01
+
+### Added
+
+- **`evals/`** — reproducible eval harness for the five Copilot-instruction
+  modes Octerse ships (`control`, `generic-terse`, `lite`, `full`, `ultra`).
+  - 10 prompts × 5 modes runner in [`evals/run.sh`](./evals/run.sh).
+    Default is **stub mode** — reads pre-recorded fixtures so CI is
+    deterministic. `--live --backend copilot|claude` invokes a real LLM
+    per pair.
+  - [`evals/measure.py`](./evals/measure.py) tabulates run logs into
+    `evals/results.json` using char/4 token estimates (no `tiktoken` dep).
+  - [`evals/report.py`](./evals/report.py) renders the table into a
+    marker block (`<!-- BENCHMARK-TABLE-START/END -->`) in the root
+    README. Idempotent. `--check` flag for CI.
+  - The honest comparison the table foregrounds is **octerse vs `"be
+    terse"`** — anyone can ask a model to be brief; the question is
+    whether mode-specific instructions buy anything beyond that.
+- **`.github/workflows/evals.yml`** — runs the matrix on every release
+  tag and opens a PR with the refreshed table + `results.json`.
+  Stub-mode by default (Copilot CLI in GitHub runners is too flaky to be
+  the source of truth for a published number).
+- **Root README `## Benchmarks`** section with auto-generated table.
+
+### Notes
+
+- `octerse-shrink` (the MCP middleware shipped in v0.3.0) is **not**
+  re-released. Its `package.json` stays at `0.3.0`; the
+  `npm-publish` job only fires when `tag === package.json.version`, so
+  pushing `v0.4.0` is a gh-extension/repo release only.
+- Stub fixtures in `evals/fixtures/` are illustrative — they show the
+  expected ordering but not a guarantee about any specific model. Run
+  `--live` to get real numbers for your model.
+- No telemetry, no network calls in the harness or the reporter.
+
 ## [0.3.0] - 2025-01
 
 ### Added

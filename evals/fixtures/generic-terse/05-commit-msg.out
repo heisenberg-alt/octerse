@@ -1,0 +1,6 @@
+Issues: past tense; subject too long; two changes in one commit.
+
+```
+feat(auth): add password reset flow
+```
+(Split the login-form change into its own commit if possible.)

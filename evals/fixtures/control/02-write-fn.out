@@ -1,0 +1,25 @@
+Here is a TypeScript function `parseDuration` that parses strings like
+"5m", "2h", "30s" into milliseconds. It uses a regular expression
+to extract the numeric portion and the unit suffix, then multiplies
+by the appropriate factor. Anything that doesn't match the format is
+rejected by throwing a TypeError.
+
+```typescript
+export function parseDuration(s: string): number {
+  const match = /^(\d+)(s|m|h)$/.exec(s);
+  if (!match) {
+    throw new TypeError(`Invalid duration: ${s}`);
+  }
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  const multipliers: Record<string, number> = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+  };
+  return value * multipliers[unit];
+}
+```
+
+You can call it like `parseDuration("30s")` to get 30000, or
+`parseDuration("2h")` to get 7200000. Bad input throws.

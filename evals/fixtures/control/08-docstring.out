@@ -1,0 +1,22 @@
+Here's a comprehensive docstring for `sha256_file` following the
+Google style guide, which is widely used in Python projects:
+
+```python
+def sha256_file(path: str) -> str:
+    """Compute the SHA-256 hex digest of a file.
+
+    Reads the file at `path` in 64 KiB chunks and returns the
+    lowercase hexadecimal digest of its contents. The file is
+    closed before the function returns, even on error.
+
+    Args:
+        path: Filesystem path to the file to hash. Must be readable.
+
+    Returns:
+        The 64-character lowercase hex digest of the file's contents.
+
+    Raises:
+        FileNotFoundError: If `path` does not exist.
+        PermissionError: If `path` exists but is not readable.
+    """
+```

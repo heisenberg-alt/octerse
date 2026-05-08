@@ -1,0 +1,8 @@
+```typescript
+export function parseDuration(s: string): number {
+  const m = /^(\d+)(s|m|h)$/.exec(s);
+  if (!m) throw new TypeError(`Invalid duration: ${s}`);
+  const mul = { s: 1e3, m: 6e4, h: 3.6e6 }[m[2]];
+  return parseInt(m[1], 10) * mul!;
+}
+```

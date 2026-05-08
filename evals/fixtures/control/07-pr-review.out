@@ -1,0 +1,15 @@
+There's a single bug in this snippet, and it's that the function
+doesn't handle the case where `b` is zero. JavaScript's `/` operator
+doesn't throw on division by zero — it returns `Infinity`,
+`-Infinity`, or `NaN` (the latter when both operands are zero),
+which can silently propagate through the rest of your code and
+produce confusing downstream failures.
+
+Suggested fix:
+
+```javascript
+function divide(a, b) {
+  if (b === 0) throw new RangeError('Division by zero');
+  return a / b;
+}
+```

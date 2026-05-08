@@ -1,0 +1,3 @@
+Write a docstring for a function `sha256_file(path: str) -> str` that returns
+the lowercase hex digest of the file at `path`. Raises `FileNotFoundError`
+if missing.

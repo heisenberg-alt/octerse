@@ -1,0 +1,2 @@
+A pytest run shows: `AssertionError: assert 0.1 + 0.2 == 0.3`.
+Explain the cause in one sentence and give the one-line fix.

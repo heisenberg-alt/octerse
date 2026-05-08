@@ -1,0 +1,14 @@
+Both `fixup` and `squash` combine the marked commit with the one
+above it in the rebase todo list. The difference lies in how the
+resulting commit message is constructed.
+
+- `squash` opens an editor and lets you edit a combined message
+  built from both the parent and the squashed commit's messages.
+- `fixup` (introduced in Git 1.7.4) silently discards the marked
+  commit's message entirely and uses only the parent's. It's
+  designed for the case where you've made a quick correction
+  ("fix typo", "address review comment") that doesn't need
+  to appear in the final history.
+
+In short: `fixup` = `squash` minus the editor prompt and minus
+the secondary message.
