@@ -94,7 +94,7 @@ run() {
 fetch() {
   # fetch <remote-path> <local-path>
   local src="$1" dst="$2"
-  if [[ -f "$dst" && $FORCE -eq 0 && $UNINSTALL -eq 0 ]]; then
+  if [[ -f "$dst" && $FORCE -eq 0 ]]; then
     warn "exists, keeping: $dst (use --force to overwrite)"
     return 0
   fi

@@ -38,7 +38,6 @@ require_repo() {
   if ! in_repo; then echo "octerse: not inside a git repo." >&2; exit 1; fi
 }
 
-c_red()    { printf '\033[31m%s\033[0m' "$*"; }
 c_green()  { printf '\033[32m%s\033[0m' "$*"; }
 c_yellow() { printf '\033[33m%s\033[0m' "$*"; }
 c_dim()    { printf '\033[2m%s\033[0m' "$*"; }
@@ -162,7 +161,7 @@ cmd_audit() {
     finding "onboarding/history sections detected — Copilot doesn't need team narrative"
   fi
 
-  if grep -qE '^[│├└─┌┐┘└╔╗╚╝═║]' "$f"; then
+  if grep -qE '^[│├└─┌┐┘╔╗╚╝═║]' "$f"; then
     finding "ASCII art / box-drawing characters — diagrams cost a lot of tokens"
   fi
 
@@ -176,12 +175,10 @@ cmd_audit() {
     finding "${fence_lines} lines of fenced code — link to a style guide instead"
   fi
 
-  if grep -qE 'http[s]?://' "$f"; then
-    local url_count
-    url_count=$(grep -cE 'http[s]?://' "$f")
-    if (( url_count > 5 )); then
-      finding "${url_count} URLs — consolidate or move to docs"
-    fi
+  local url_count
+  url_count=$(grep -cE 'https?://' "$f") || url_count=0
+  if (( url_count > 5 )); then
+    finding "${url_count} URLs — consolidate or move to docs"
   fi
 
   if ! grep -qiE 'do not|don.t|avoid|never' "$f"; then
@@ -226,11 +223,6 @@ Reference: docs/context-engineering.md
 EOF
 }
 
-# Echo "lines bytes" for a file.
-context_file_size() {
-  printf '%s %s' "$(wc -l <"$1" | tr -d ' ')" "$(wc -c <"$1" | tr -d ' ')"
-}
-
 # Does an .instructions.md file carry a scoping applyTo other than "**"?
 context_is_scoped() {
   # frontmatter applyTo present and not the match-everything glob
@@ -256,17 +248,24 @@ cmd_context() {
 
   add_file() {
     local f="$1" lines bytes
-    read -r lines bytes <<<"$(context_file_size "$f")"
+    # single wc pass: "-lc" prints lines then bytes
+    read -r lines bytes <<<"$(wc -lc <"$f")"
     total_lines=$((total_lines + lines))
     total_bytes=$((total_bytes + bytes))
     rows="${rows}${f}|${lines}|${bytes}
 "
     json_rows="${json_rows}${json_rows:+,}{\"path\":\"$f\",\"lines\":$lines,\"bytes\":$bytes,\"est_tokens\":$((bytes / 4))}"
+    ADDED_LINES=$lines
   }
 
   # --- always-on layer ------------------------------------------------------
-  [[ -f .github/copilot-instructions.md ]] && add_file .github/copilot-instructions.md
-  [[ -f AGENTS.md ]] && add_file AGENTS.md
+  local ci_lines=-1 ag_lines=-1
+  if [[ -f .github/copilot-instructions.md ]]; then
+    add_file .github/copilot-instructions.md; ci_lines=$ADDED_LINES
+  fi
+  if [[ -f AGENTS.md ]]; then
+    add_file AGENTS.md; ag_lines=$ADDED_LINES
+  fi
   local unscoped=""
   if [[ -d .github/instructions ]]; then
     local inst
@@ -288,8 +287,16 @@ cmd_context() {
   done
   local mcp_servers=0
   if [[ -f .vscode/mcp.json ]]; then
-    mcp_servers=$(grep -cE '^\s*"[^"]+"\s*:\s*\{' .vscode/mcp.json 2>/dev/null) || mcp_servers=0
-    (( mcp_servers > 0 )) && mcp_servers=$((mcp_servers - 1))  # exclude "servers" wrapper
+    if command -v jq >/dev/null 2>&1; then
+      # strip // comment lines (mcp.json is JSONC) and count actual servers
+      mcp_servers=$(grep -v '^[[:space:]]*//' .vscode/mcp.json \
+        | jq '.servers // {} | length' 2>/dev/null) || mcp_servers=0
+    else
+      # heuristic fallback: object-opening keys minus the "servers" wrapper.
+      # Overcounts nested objects (env, headers) — jq path is preferred.
+      mcp_servers=$(grep -cE '^\s*"[^"]+"\s*:\s*\{' .vscode/mcp.json 2>/dev/null) || mcp_servers=0
+      (( mcp_servers > 0 )) && mcp_servers=$((mcp_servers - 1))
+    fi
   fi
 
   local est_tokens=$((total_bytes / 4))
@@ -299,17 +306,13 @@ cmd_context() {
   note() { findings=$((findings+1)); notes="${notes}$*
 "; }
 
-  if [[ ! -f .github/copilot-instructions.md ]]; then
+  if (( ci_lines < 0 )); then
     note "no .github/copilot-instructions.md — run: gh octerse install"
-  else
-    local ci_lines
-    ci_lines=$(wc -l <.github/copilot-instructions.md | tr -d ' ')
-    (( ci_lines > 80 )) && note "copilot-instructions.md is ${ci_lines} lines — aim for <=80 (gh octerse compress)"
+  elif (( ci_lines > 80 )); then
+    note "copilot-instructions.md is ${ci_lines} lines — aim for <=80 (gh octerse compress)"
   fi
-  if [[ -f AGENTS.md ]]; then
-    local ag_lines
-    ag_lines=$(wc -l <AGENTS.md | tr -d ' ')
-    (( ag_lines > 40 )) && note "AGENTS.md is ${ag_lines} lines — agents re-read it every turn (gh octerse compress AGENTS.md)"
+  if (( ag_lines > 40 )); then
+    note "AGENTS.md is ${ag_lines} lines — agents re-read it every turn (gh octerse compress AGENTS.md)"
   fi
   if [[ -n "$unscoped" ]]; then
     while IFS= read -r f; do
@@ -395,7 +398,7 @@ cmd_stats() {
   # Crude estimate: assume ~3k tokens saved per Copilot-assisted commit
   # under octerse vs. baseline. This is a guess, not a measurement.
   local saved=$(( commits * 3000 ))
-  local cents_saved=$(( saved / 1000 * 1 ))   # ~$0.01 per 1k tokens, rough
+  local cents_saved=$(( saved / 1000 ))   # ~$0.01 per 1k tokens, rough
 
   cat <<EOF
 

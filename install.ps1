@@ -54,7 +54,7 @@ if (-not $repoRoot) { Write-Error "octerse: not inside a git repo. Run from the 
 Set-Location $repoRoot
 
 function Fetch-File($src, $dst) {
-  if ((Test-Path $dst) -and -not $Force -and -not $Uninstall) {
+  if ((Test-Path $dst) -and -not $Force) {
     Warn "exists, keeping: $dst (use -Force to overwrite)"; return
   }
   $dir = Split-Path -Parent $dst

@@ -52,7 +52,8 @@ class JsonRpcFramer {
   private mode: FrameMode = 'unknown';
 
   push(chunk: Buffer): unknown[] {
-    this.buf = Buffer.concat([this.buf, chunk]);
+    // Zero-copy in the common case: previous frames were fully consumed.
+    this.buf = this.buf.length === 0 ? chunk : Buffer.concat([this.buf, chunk]);
     const out: unknown[] = [];
     while (true) {
       if (this.mode === 'unknown') {
@@ -66,9 +67,16 @@ class JsonRpcFramer {
         }
       }
 
+      const before = this.buf.length;
       const frame = this.mode === 'lsp' ? this.readLsp() : this.readNdjson();
-      if (!frame) break;
-      out.push(frame);
+      if (frame !== undefined) {
+        out.push(frame);
+        continue;
+      }
+      // No frame produced. If no bytes were consumed we need more data;
+      // otherwise we skipped garbage (blank line, garbled header) — retry,
+      // since complete frames may still be buffered behind it.
+      if (this.buf.length === before) break;
     }
     return out;
   }

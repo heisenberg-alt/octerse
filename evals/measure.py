@@ -14,12 +14,19 @@ import json
 import math
 import statistics
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_RUN = HERE / ".runs" / "latest"
+
+
+@lru_cache(maxsize=None)
+def _read_text(path: Path) -> str:
+    """Cached read — mode/prompt files are re-used across every row."""
+    return path.read_text()
 
 
 def estimate_tokens(text: str) -> int:
@@ -40,7 +47,11 @@ def measure_pair(meta_path: Path) -> dict[str, Any]:
         "output_bytes": len(output.encode("utf-8")),
         "output_words": len(output.split()),
         "output_lines": output.count("\n") + (1 if output and not output.endswith("\n") else 0),
-        "tokens_in": estimate_tokens(open(HERE / "modes" / f"{meta['mode']}.md").read() + "\n\n" + open(HERE / "prompts" / f"{meta['prompt']}.txt").read()),
+        "tokens_in": estimate_tokens(
+            _read_text(HERE / "modes" / f"{meta['mode']}.md")
+            + "\n\n"
+            + _read_text(HERE / "prompts" / f"{meta['prompt']}.txt")
+        ),
         "tokens_out": estimate_tokens(output),
         "wall_seconds": round(meta["ended_at"] - meta["started_at"], 4),
         "live": meta.get("live", 0),
