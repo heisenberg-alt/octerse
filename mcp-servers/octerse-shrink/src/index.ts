@@ -48,7 +48,9 @@ const COMPRESSED_METHODS = new Set([
 type FrameMode = 'unknown' | 'lsp' | 'ndjson';
 
 class JsonRpcFramer {
-  private buf = Buffer.alloc(0);
+  // Explicit `Buffer` annotation: Buffer.alloc() infers Buffer<ArrayBuffer>,
+  // which rejects incoming Buffer<ArrayBufferLike> chunks on newer @types/node.
+  private buf: Buffer = Buffer.alloc(0);
   private mode: FrameMode = 'unknown';
 
   push(chunk: Buffer): unknown[] {
