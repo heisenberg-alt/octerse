@@ -32,7 +32,7 @@ export interface MarkdownCompressResult {
   bytesIn: number;
   bytesOut: number;
   changed: boolean;
-  refusal?: 'already-compressed' | 'keep-span-covers-all';
+  refusal?: 'already-compressed' | 'keep-span-covers-all' | 'no-savings';
 }
 
 const MARKER = '<!-- octerse-compressed: true -->';
@@ -209,5 +209,12 @@ export function compressMarkdown(
 
   const body = `${MARKER}\n${collapsed.join('\n').replace(/^\n+/, '')}`;
   const bytesOut = Buffer.byteLength(body, 'utf8');
+  // Already-terse input: if the marker overhead outweighs rule savings the
+  // "compressed" file would be no smaller (or larger). Refuse rather than
+  // grow the per-turn tax we exist to shrink. --force does not override
+  // this: force re-runs compression, it doesn't force a worse outcome.
+  if (bytesOut >= bytesIn) {
+    return { body: input, bytesIn, bytesOut: bytesIn, changed: false, refusal: 'no-savings' };
+  }
   return { body, bytesIn, bytesOut, changed: body !== input };
 }

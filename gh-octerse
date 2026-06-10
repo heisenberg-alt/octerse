@@ -814,6 +814,14 @@ cmd_compress() {
     return 1
   fi
 
+  # Engine returned the input unchanged (no-savings refusal): nothing to
+  # write, no backup to create.
+  if cmp -s "$tmp" "$file"; then
+    cat "$tmp_err" >&2
+    rm -f "$tmp" "$tmp_err"
+    return 0
+  fi
+
   cp "$file" "$backup"
   mv "$tmp" "$file"
   rm -f "$tmp_err"

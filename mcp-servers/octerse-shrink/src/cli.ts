@@ -158,6 +158,13 @@ async function compressMain(rest: string[]): Promise<number> {
     );
     return 1;
   }
+  if (r.refusal === 'no-savings') {
+    process.stderr.write(
+      `octerse-shrink compress: ${stdin ? '(stdin)' : file} is already terse — marker overhead would exceed savings; leaving unchanged\n`,
+    );
+    if (stdin) process.stdout.write(input);
+    return 0;
+  }
 
   if (stdin) {
     process.stdout.write(r.body);

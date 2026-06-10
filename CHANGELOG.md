@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **No-savings refusal.** `compressMarkdown` now returns a `no-savings`
+  refusal when the `<!-- octerse-compressed: true -->` marker overhead
+  would equal or exceed rule savings (already-terse files). The CLI exits
+  0 with a message and leaves the file unchanged; `gh octerse compress`
+  skips the backup. Found by end-to-end testing against a real
+  repository's AGENTS.md, where compress previously *grew* the file
+  15,195 → 15,229 bytes and reported it as success.
 - **`gh octerse context`** — audit of the full context stack. Scans the
   always-on layer (`.github/copilot-instructions.md`, `AGENTS.md`,
   `.github/instructions/*.instructions.md`), prints lines / bytes /

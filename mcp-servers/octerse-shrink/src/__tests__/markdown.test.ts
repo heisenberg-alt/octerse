@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { compressMarkdown } from '../markdown.js';
 
+// Compressible padding: ensures rule savings outweigh the marker overhead
+// so small fixtures don't trip the no-savings refusal.
+const FLUFF =
+  'This tool is a very comprehensive and extremely powerful utility that is ' +
+  'designed in order to be very robust as well as very user-friendly.';
+
 describe('compressMarkdown', () => {
   it('idempotency: marker prevents re-compression', () => {
-    const input = '# Hello\n\nThis tool is a very comprehensive helper.\n';
+    const input = `# Hello\n\n${FLUFF}\n`;
     const first = compressMarkdown(input);
     expect(first.changed).toBe(true);
     expect(first.body.startsWith('<!-- octerse-compressed: true -->\n')).toBe(true);
@@ -15,7 +21,7 @@ describe('compressMarkdown', () => {
   });
 
   it('--force re-compresses without stacking markers', () => {
-    const input = '# Hello\n\nThis tool helps you debug.\n';
+    const input = `# Hello\n\n${FLUFF}\n`;
     const first = compressMarkdown(input);
     const forced = compressMarkdown(first.body, { force: true });
     const markerCount = (forced.body.match(/octerse-compressed: true/g) ?? []).length;
@@ -55,7 +61,7 @@ describe('compressMarkdown', () => {
   });
 
   it('keeps heading prefixes intact', () => {
-    const input = '## This Tool is Very Comprehensive\n\nbody\n';
+    const input = `## This Tool is Very Comprehensive\n\n${FLUFF}\n`;
     const r = compressMarkdown(input);
     expect(r.body).toMatch(/^<!-- octerse-compressed: true -->\n## /m);
     expect(r.bytesOut).toBeLessThan(r.bytesIn + 50); // marker added but body shrunk
@@ -99,6 +105,24 @@ Another very comprehensive paragraph after the span.
     expect(r.body).toBe(input);
   });
 
+  it('refuses with no-savings when marker overhead exceeds rule savings', () => {
+    // Already terse: nothing for the rules to remove, so adding the marker
+    // would only grow the file.
+    const input = 'Terse line.\nAnother terse line.\n';
+    const r = compressMarkdown(input);
+    expect(r.refusal).toBe('no-savings');
+    expect(r.body).toBe(input);
+    expect(r.changed).toBe(false);
+    expect(r.bytesOut).toBe(r.bytesIn);
+  });
+
+  it('no-savings refusal is not overridden by force', () => {
+    const input = 'Terse line.\n';
+    const r = compressMarkdown(input, { force: true });
+    expect(r.refusal).toBe('no-savings');
+    expect(r.body).toBe(input);
+  });
+
   it('shrinks plain prose substantially', () => {
     // Long enough that the marker overhead doesn't dominate.
     const input = [
@@ -119,7 +143,7 @@ Another very comprehensive paragraph after the span.
   });
 
   it('collapses 3+ blank lines to 2', () => {
-    const input = 'a\n\n\n\n\nb\n';
+    const input = `${FLUFF}\n\n\n\n\nb\n`;
     const r = compressMarkdown(input);
     expect(r.body).not.toMatch(/\n\n\n\n/);
   });
