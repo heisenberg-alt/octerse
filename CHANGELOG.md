@@ -4,7 +4,7 @@ All notable changes to **octerse** are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-06-11
 
 ### Added
 
@@ -38,6 +38,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   keyboard / swipe / scroll navigation). Deployed to GitHub Pages via
   [`.github/workflows/pages.yml`](./.github/workflows/pages.yml).
 - 13 bats cases in [`tests/context.bats`](./tests/context.bats).
+
+### Fixed
+
+- **octerse-shrink proxy:** only responses settle the pending-request map —
+  server-initiated requests share the `id` field but not the id namespace;
+  deleting on them could let `tools/list` responses escape compression.
+  Also fixed a framing stall when garbage preceded a buffered frame, and
+  falsy-but-valid JSON frames (`null`/`0`/`false`) being dropped.
+- **compress:** the 240-byte hard cap can no longer leave an unbalanced
+  backtick when it lands inside an inline code span.
+- **install.sh:** `run()` executes argv directly instead of `eval` —
+  quote-safe paths, removes an injection surface in a curl-piped script.
+- **gh octerse spend:** error temp file via `mktemp` instead of a
+  predictable `/tmp` path; **gh octerse context --json** escapes file
+  paths in JSON output.
 
 ## [0.5.0] - 2025-01
 

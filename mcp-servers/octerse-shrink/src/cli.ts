@@ -23,7 +23,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { runProxy } from './index.js';
 import { compressMarkdown } from './markdown.js';
 
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 
 interface CliArgs {
   passthrough: boolean;

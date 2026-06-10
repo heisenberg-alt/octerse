@@ -1,6 +1,6 @@
 {
   "name": "octerse-shrink",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Deterministic stdio middleware + markdown compressor. Compresses MCP tool/prompt/resource description fields and AGENTS.md / instructions files. No LLM, no telemetry.",
   "license": "MIT",
   "author": "heisenberg-alt",

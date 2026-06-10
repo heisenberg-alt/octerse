@@ -3,7 +3,7 @@
 # https://github.com/heisenberg-alt/octerse · MIT
 set -euo pipefail
 
-VERSION="0.5.0"
+VERSION="0.6.0"
 REPO_RAW="${OCTERSE_RAW:-https://raw.githubusercontent.com/heisenberg-alt/octerse/main}"
 
 # ---- args ------------------------------------------------------------------
