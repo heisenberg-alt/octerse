@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get started — octerse</title>
+<meta name="description" content="Install octerse in two minutes. Terse Copilot output, context engineering, and real spend visibility for usage-based billing.">
+<style>
+  :root {
+    --bg:        #0d1117;
+    --bg-subtle: #161b22;
+    --border:    #30363d;
+    --fg:        #e6edf3;
+    --fg-muted:  #8b949e;
+    --accent:    #2f81f7;
+    --green:     #3fb950;
+    --orange:    #d29922;
+    --grad:      linear-gradient(135deg, #2f81f7 0%, #bc8cff 50%, #f778ba 100%);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+            "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font);
+    -webkit-font-smoothing: antialiased; line-height: 1.6;
+  }
+  .glow {
+    position: fixed; width: 60vw; height: 60vw; border-radius: 50%;
+    filter: blur(140px); opacity: .10; pointer-events: none; z-index: 0;
+    background: var(--grad); top: -30vw; right: -20vw;
+  }
+  nav {
+    position: sticky; top: 0; z-index: 5; display: flex; align-items: center;
+    gap: 1.4rem; padding: .9rem 2rem;
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    backdrop-filter: blur(14px); border-bottom: 1px solid var(--border);
+  }
+  nav .brand { font-weight: 700; letter-spacing: -.02em; }
+  nav a { color: var(--fg-muted); text-decoration: none; font-size: .9rem; }
+  nav a:hover { color: var(--fg); }
+  nav .spacer { flex: 1; }
+
+  main { max-width: 760px; margin: 0 auto; padding: 4rem 1.5rem 6rem; position: relative; z-index: 1; }
+
+  h1 {
+    font-size: clamp(2.4rem, 6vw, 3.6rem); font-weight: 700;
+    letter-spacing: -.03em; line-height: 1.08; margin-bottom: 1rem;
+  }
+  .grad-text { background: var(--grad); -webkit-background-clip: text;
+               background-clip: text; color: transparent; }
+  .lede { color: var(--fg-muted); font-size: 1.15rem; max-width: 56ch; margin-bottom: 3rem; }
+
+  h2 {
+    font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em;
+    margin: 3.2rem 0 .9rem; padding-top: 1.2rem; border-top: 1px solid var(--border);
+  }
+  h2 .step {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.7em; height: 1.7em; margin-right: .55em; border-radius: 50%;
+    background: var(--grad); color: #fff; font-size: .72em; vertical-align: .12em;
+  }
+  h3 { font-size: 1.05rem; font-weight: 650; margin: 1.6rem 0 .5rem; }
+  p { margin: .7rem 0; color: var(--fg); }
+  p.muted, li.muted { color: var(--fg-muted); }
+  ul, ol { margin: .7rem 0 .7rem 1.4rem; }
+  li { margin: .3rem 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  strong { font-weight: 650; }
+
+  code { font-family: var(--mono); font-size: .88em; background: var(--bg-subtle);
+         border: 1px solid var(--border); border-radius: 6px; padding: .12em .4em; }
+  pre {
+    background: #010409; border: 1px solid var(--border); border-radius: 12px;
+    padding: 1rem 1.2rem; overflow-x: auto; margin: 1rem 0;
+    font-family: var(--mono); font-size: .85rem; line-height: 1.65;
+  }
+  pre code { background: none; border: none; padding: 0; }
+  pre .c { color: var(--fg-muted); }
+  pre .g { color: var(--green); }
+
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92rem; }
+  th, td { padding: .55em .9em; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--fg-muted); font-weight: 600; font-size: .78em;
+       letter-spacing: .08em; text-transform: uppercase; }
+  td:first-child { font-family: var(--mono); font-size: .88em; white-space: nowrap; }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 10px; background: var(--bg-subtle);
+    padding: .9rem 1.2rem; margin: 1.2rem 0; font-size: .95rem;
+  }
+  .callout.warn { border-left-color: var(--orange); }
+
+  footer {
+    border-top: 1px solid var(--border); margin-top: 4rem; padding-top: 1.6rem;
+    color: var(--fg-muted); font-size: .88rem; display: flex; gap: 1.2rem; flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<nav>
+  <span class="brand">🐙 octerse</span>
+  <a href="./index.html">Deck</a>
+  <a href="#install">Install</a>
+  <a href="#modes">Modes</a>
+  <a href="#context">Context</a>
+  <a href="#spend">Spend</a>
+  <span class="spacer"></span>
+  <a href="https://github.com/heisenberg-alt/octerse">GitHub →</a>
+</nav>
+
+<main>
+  <h1>Get started in<br><span class="grad-text">two minutes.</span></h1>
+  <p class="lede">Octerse makes GitHub Copilot answer like an engineer on their
+  36th on-call hour — code first, words last. Same accuracy, ~65% fewer output
+  tokens. Here's the full setup, end to end.</p>
+
+  <h2 id="prereqs"><span class="step">0</span>Prerequisites</h2>
+  <ul>
+    <li>A <strong>git repository</strong> — octerse installs per-repo, nothing global</li>
+    <li><strong>GitHub Copilot</strong> in VS Code and/or Copilot CLI</li>
+    <li class="muted">Optional: <code>gh</code> CLI for the <code>gh octerse</code> extension, <code>jq</code> for spend reports, Node 18+ for the MCP proxy</li>
+  </ul>
+
+  <h2 id="install"><span class="step">1</span>Install</h2>
+  <p>From the root of any repo:</p>
+<pre><code><span class="c"># macOS / Linux / WSL / Git Bash</span>
+curl -fsSL https://raw.githubusercontent.com/heisenberg-alt/octerse/main/install.sh | bash
+
+<span class="c"># Windows (PowerShell)</span>
+irm https://raw.githubusercontent.com/heisenberg-alt/octerse/main/install.ps1 | iex
+
+<span class="c"># or via the gh CLI</span>
+gh extension install heisenberg-alt/octerse
+gh octerse install --mode full</code></pre>
+  <p>This writes exactly five things — nothing else is touched:</p>
+  <table>
+    <tr><th>Path</th><th>What it is</th></tr>
+    <tr><td>.github/copilot-instructions.md</td><td>The active terse-mode payload (≤80 lines)</td></tr>
+    <tr><td>.vscode/settings.json</td><td>Copilot instruction + prompt-file keys, <strong>merged</strong> not overwritten</td></tr>
+    <tr><td>.octerse/skills/</td><td><code>/octerse-*</code> prompt files for Copilot Chat</td></tr>
+    <tr><td>AGENTS.md</td><td>Optional, with <code>--with-agents</code></td></tr>
+    <tr><td>.octerse/</td><td>Local state (mode, stats)</td></tr>
+  </table>
+  <div class="callout">Useful flags: <code>--dry-run</code> previews every write,
+  <code>--force</code> overwrites, <code>--uninstall</code> removes everything,
+  <code>--with-context</code> adds context-discipline rules (step 3),
+  <code>--with-shrink</code> adds the MCP proxy example.</div>
+  <p>Reload the VS Code window, then try <code>/octerse-help</code> in Copilot Chat.</p>
+
+  <h2 id="modes"><span class="step">2</span>Pick a mode</h2>
+  <table>
+    <tr><th>Mode</th><th>When</th><th>Vibe</th></tr>
+    <tr><td>lite</td><td>New teams, mixed audiences</td><td>Keep grammar. Drop filler.</td></tr>
+    <tr><td>full <span class="g">(default)</span></td><td>Most engineers</td><td>Fragments OK. No articles.</td></tr>
+    <tr><td>ultra</td><td>Senior devs only</td><td>Telegraphic. Symbols. <code>→ ∴ ==</code></td></tr>
+    <tr><td>enterprise</td><td>GitHub Enterprise</td><td>lite + PII / policy guardrails</td></tr>
+  </table>
+<pre><code>gh octerse mode lite      <span class="c"># switch any time</span>
+gh octerse status         <span class="c"># see what's installed</span></code></pre>
+
+  <h2 id="context"><span class="step">3</span>Engineer your context</h2>
+  <p>Output is half the bill. The other half is everything re-sent on
+  <em>every turn</em> — instructions files, history, tool output. Audit it:</p>
+<pre><code>gh octerse context
+<span class="c">  Sent every turn:
+    .github/copilot-instructions.md   52 lines   1,840 B   ~460 tok
+    AGENTS.md                        316 lines  15,195 B  ~3,798 tok
+    ── per-turn tax                  368 lines  17,035 B  ~4,258 tok</span></code></pre>
+  <p>Then act on the findings:</p>
+<pre><code>bash install.sh --with-context       <span class="c"># ≤40-line context-discipline rules</span>
+gh octerse audit                     <span class="c"># flag bloat patterns</span>
+gh octerse compress AGENTS.md        <span class="c"># shrink in place — reversible</span>
+gh octerse compress --restore AGENTS.md   <span class="c"># undo</span></code></pre>
+  <div class="callout">Compress refuses politely when there's nothing to gain:
+  untracked files, symlinks, files where the marker would outweigh the savings.
+  Every rewrite leaves a <code>.original.md</code> backup. Read the full
+  <a href="https://github.com/heisenberg-alt/octerse/blob/main/docs/context-engineering.md">context engineering guide</a>.</div>
+
+  <h2 id="shrink"><span class="step">4</span>Shrink MCP descriptions (optional)</h2>
+  <p>MCP servers ship verbose tool descriptions that you re-pay for every turn.
+  Wrap any stdio server with the <code>octerse-shrink</code> proxy — typical
+  saving is 60–80% of description bytes; <code>tools/call</code> payloads pass
+  through byte-for-byte:</p>
+<pre><code><span class="c">// .vscode/mcp.json</span>
+"filesystem": {
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "octerse-shrink", "--",
+           "npx", "-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"]
+}</code></pre>
+
+  <h2 id="spend"><span class="step">5</span>Watch the spend</h2>
+<pre><code>gh auth refresh -s manage_billing:copilot,read:org   <span class="c"># once</span>
+gh octerse spend --org acme              <span class="c"># $ this billing period</span>
+gh octerse spend --org acme --since 7d   <span class="c"># last 7 days</span>
+gh octerse spend --org acme --json       <span class="c"># pipe to jq / dashboards</span>
+gh octerse spend --org acme --calculator <span class="c"># open the UBB Estimator pre-filled</span></code></pre>
+  <p class="muted">Reads only <code>api.github.com</code> with your existing
+  <code>gh</code> token. No telemetry, nothing written to disk.</p>
+
+  <h2 id="habits"><span class="step">6</span>Build the habits</h2>
+  <ol>
+    <li>New session per task — <code>/clear</code> between unrelated work</li>
+    <li>Open with <code>/plan</code> for anything beyond a one-liner</li>
+    <li>Reference <code>@path/file:line</code>, never directories</li>
+    <li><code>/compact</code> before you switch focus, not after the window is full</li>
+    <li>Default to mid-tier models; <code>/model</code> up only when stuck</li>
+    <li>Keep instructions ≤80 lines — <code>gh octerse audit</code></li>
+    <li>End every session with <code>/usage</code></li>
+    <li>Delegate long work with <code>/delegate</code></li>
+  </ol>
+  <p class="muted"><code>gh octerse tips</code> prints this checklist in your terminal.</p>
+
+  <h2 id="more">Going deeper</h2>
+  <ul>
+    <li><a href="https://github.com/heisenberg-alt/octerse/blob/main/docs/playbook.md">The playbook</a> — the full five-lever framework (~70% token-spend reduction)</li>
+    <li><a href="https://github.com/heisenberg-alt/octerse/blob/main/docs/context-engineering.md">Context engineering guide</a> — instructions, #-mentions, skills, sessions</li>
+    <li><a href="https://heisenberg-alt.github.io/usage-based-billing/">UBB Estimator</a> — your team's dollar number under usage-based billing</li>
+    <li><a href="./index.html">The deck</a> — the 10-slide pitch</li>
+  </ul>
+
+  <div class="callout warn"><strong>Uninstall any time:</strong>
+  <code>bash install.sh --uninstall</code> removes every octerse-managed path
+  and restores your VS Code settings backup.</div>
+
+  <footer>
+    <a href="https://github.com/heisenberg-alt/octerse">GitHub</a>
+    <a href="https://github.com/heisenberg-alt/octerse/blob/main/LICENSE">MIT License</a>
+    <a href="https://github.com/heisenberg-alt/octerse/blob/main/CONTRIBUTING.md">Contributing</a>
+    <span>🐙 less prose, more PRs.</span>
+  </footer>
+</main>
+</body>
+</html>
