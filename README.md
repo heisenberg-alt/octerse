@@ -285,8 +285,6 @@ _Token counts are char/4 estimates; treat as ratios across modes, not as exact A
 _Run: `.runs/20260610T230240Z` · 50 pairs._
 <!-- BENCHMARK-TABLE-END -->
 
-
-
 ## Privacy
 
 - **No telemetry.** Octerse never phones home.
