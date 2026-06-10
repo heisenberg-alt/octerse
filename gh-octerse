@@ -19,6 +19,7 @@ Commands:
   mode <m>               switch active mode (lite|full|ultra|enterprise)
   status                 show the current mode and installed paths
   audit                  flag bloat in your existing copilot-instructions.md
+  context [--json]       audit the full context stack — per-turn token tax + findings
   tips                   print the eight-habit Monday-morning checklist
   stats                  estimated savings for this repo (heuristic, local-only)
   spend [--org <n>]      org Copilot $ this billing period (reads api.github.com)
@@ -127,6 +128,7 @@ cmd_status() {
   echo "  vscode keys:    $( [[ -f .vscode/settings.json ]] && grep -q octerse .vscode/settings.json 2>/dev/null && echo yes || echo no )"
   echo "  skills dir:     $( [[ -d .octerse/skills ]] && echo yes || echo no )"
   echo "  agents file:    $( [[ -f AGENTS.md ]] && echo yes || echo no )"
+  echo "  context rules:  $( [[ -f .github/instructions/octerse-context.instructions.md ]] && echo yes || echo no )"
 }
 
 # Inspect .github/copilot-instructions.md for common bloat patterns.
@@ -195,6 +197,167 @@ cmd_audit() {
     echo "$(c_yellow "${findings} finding(s).") Trim and re-run \`gh octerse audit\`."
     echo "$(c_dim 'Reference: docs/playbook.md → Lever 3.')"
   fi
+}
+
+# ---- context (full context-stack audit) ------------------------------------
+
+context_usage() {
+  cat <<'EOF'
+gh octerse context — audit the full context stack this repo sends Copilot.
+
+Scans the files injected into EVERY request (the per-turn tax):
+  .github/copilot-instructions.md
+  AGENTS.md
+  .github/instructions/*.instructions.md
+
+Plus on-demand surfaces (informational, no per-turn cost):
+  .octerse/skills/ and .github/prompts/ prompt files
+  .vscode/mcp.json configured servers
+
+Usage:
+  gh octerse context [--json]
+
+Flags:
+  --json        machine-readable output
+  -h, --help    this help
+
+Token estimate is bytes/4 — a rough planning number, not a measurement.
+Reference: docs/context-engineering.md
+EOF
+}
+
+# Echo "lines bytes" for a file.
+context_file_size() {
+  printf '%s %s' "$(wc -l <"$1" | tr -d ' ')" "$(wc -c <"$1" | tr -d ' ')"
+}
+
+# Does an .instructions.md file carry a scoping applyTo other than "**"?
+context_is_scoped() {
+  # frontmatter applyTo present and not the match-everything glob
+  awk '/^---$/{f++;next} f==1 && /^applyTo:/' "$1" 2>/dev/null \
+    | grep -vqE 'applyTo:[[:space:]]*["'"'"']?\*\*["'"'"']?[[:space:]]*$'
+}
+
+cmd_context() {
+  local want_json=0
+  while (( $# )); do
+    case "$1" in
+      --json)    want_json=1; shift ;;
+      -h|--help) context_usage; return 0 ;;
+      *) echo "octerse context: unknown flag: $1" >&2; context_usage >&2; return 2 ;;
+    esac
+  done
+
+  require_repo; cd "$(repo_root)"
+
+  local total_bytes=0 total_lines=0 findings=0
+  local rows=""        # display rows: "path|lines|bytes"
+  local json_rows=""   # json fragments
+
+  add_file() {
+    local f="$1" lines bytes
+    read -r lines bytes <<<"$(context_file_size "$f")"
+    total_lines=$((total_lines + lines))
+    total_bytes=$((total_bytes + bytes))
+    rows="${rows}${f}|${lines}|${bytes}
+"
+    json_rows="${json_rows}${json_rows:+,}{\"path\":\"$f\",\"lines\":$lines,\"bytes\":$bytes,\"est_tokens\":$((bytes / 4))}"
+  }
+
+  # --- always-on layer ------------------------------------------------------
+  [[ -f .github/copilot-instructions.md ]] && add_file .github/copilot-instructions.md
+  [[ -f AGENTS.md ]] && add_file AGENTS.md
+  local unscoped=""
+  if [[ -d .github/instructions ]]; then
+    local inst
+    for inst in .github/instructions/*.instructions.md; do
+      [[ -f "$inst" ]] || continue
+      add_file "$inst"
+      context_is_scoped "$inst" || unscoped="${unscoped}${inst}
+"
+    done
+  fi
+
+  # --- on-demand layer ------------------------------------------------------
+  local skill_count=0 d
+  for d in .octerse/skills .github/prompts; do
+    [[ -d "$d" ]] || continue
+    local n
+    n=$(find "$d" -maxdepth 1 -name '*.prompt.md' 2>/dev/null | wc -l | tr -d ' ')
+    skill_count=$((skill_count + n))
+  done
+  local mcp_servers=0
+  if [[ -f .vscode/mcp.json ]]; then
+    mcp_servers=$(grep -cE '^\s*"[^"]+"\s*:\s*\{' .vscode/mcp.json 2>/dev/null) || mcp_servers=0
+    (( mcp_servers > 0 )) && mcp_servers=$((mcp_servers - 1))  # exclude "servers" wrapper
+  fi
+
+  local est_tokens=$((total_bytes / 4))
+
+  # --- findings ---------------------------------------------------------------
+  local notes=""
+  note() { findings=$((findings+1)); notes="${notes}$*
+"; }
+
+  if [[ ! -f .github/copilot-instructions.md ]]; then
+    note "no .github/copilot-instructions.md — run: gh octerse install"
+  else
+    local ci_lines
+    ci_lines=$(wc -l <.github/copilot-instructions.md | tr -d ' ')
+    (( ci_lines > 80 )) && note "copilot-instructions.md is ${ci_lines} lines — aim for <=80 (gh octerse compress)"
+  fi
+  if [[ -f AGENTS.md ]]; then
+    local ag_lines
+    ag_lines=$(wc -l <AGENTS.md | tr -d ' ')
+    (( ag_lines > 40 )) && note "AGENTS.md is ${ag_lines} lines — agents re-read it every turn (gh octerse compress AGENTS.md)"
+  fi
+  if [[ -n "$unscoped" ]]; then
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && note "$f has no scoping applyTo — it is always-on; add a glob (e.g. \"**/*.sql\")"
+    done <<<"$unscoped"
+  fi
+  if [[ ! -f .github/instructions/octerse-context.instructions.md ]]; then
+    note "context-discipline rules not installed — add with: bash install.sh --with-context"
+  fi
+  if [[ -f .vscode/mcp.json ]] && ! grep -q 'octerse-shrink' .vscode/mcp.json 2>/dev/null; then
+    note "mcp.json servers not wrapped with octerse-shrink — descriptions re-sent every turn (--with-shrink)"
+  fi
+  (( est_tokens > 1500 )) && note "always-on layer is ~${est_tokens} tokens/turn — every line here is a recurring tax"
+
+  # --- render -----------------------------------------------------------------
+  if (( want_json )); then
+    printf '{"always_on":[%s],"totals":{"lines":%s,"bytes":%s,"est_tokens_per_turn":%s},"on_demand":{"prompt_files":%s,"mcp_servers":%s},"findings":%s}\n' \
+      "$json_rows" "$total_lines" "$total_bytes" "$est_tokens" "$skill_count" "$mcp_servers" "$findings"
+    return 0
+  fi
+
+  echo "octerse context · $(repo_root)"
+  echo
+  echo "  Sent every turn:"
+  if [[ -z "$rows" ]]; then
+    echo "    (nothing — no instruction files found)"
+  else
+    while IFS='|' read -r f l b; do
+      [[ -n "$f" ]] || continue
+      printf '    %-52s %4s lines  %7s B  ~%s tok\n' "$f" "$l" "$(human_int "$b")" "$(human_int $((b / 4)))"
+    done <<<"$rows"
+    printf '    %-52s %4s lines  %7s B  ~%s tok\n' "── per-turn tax" "$total_lines" "$(human_int "$total_bytes")" "$(human_int "$est_tokens")"
+  fi
+  echo
+  echo "  Loaded on demand (no per-turn cost):"
+  echo "    prompt files (skills):  $skill_count"
+  echo "    MCP servers:            $mcp_servers"
+  echo
+  if (( findings == 0 )); then
+    echo "  $(c_green 'No findings.') Context stack is lean."
+  else
+    echo "  Findings:"
+    while IFS= read -r n; do
+      [[ -n "$n" ]] && printf '    %s %s\n' "$(c_yellow '!')" "$n"
+    done <<<"$notes"
+  fi
+  echo
+  echo "  $(c_dim 'Estimate is bytes/4. Deep dive: docs/context-engineering.md')"
 }
 
 cmd_tips() {
@@ -668,6 +831,7 @@ case "$sub" in
   mode)      cmd_mode "$@" ;;
   status)    cmd_status ;;
   audit)     cmd_audit ;;
+  context)   cmd_context "$@" ;;
   tips)      cmd_tips ;;
   stats)     cmd_stats "$@" ;;
   spend)     cmd_spend "$@" ;;

@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blue.svg)](./CONTRIBUTING.md)
 
-[Install](#install) · [Modes](#modes) · [What you get](#what-you-get) · [Playbook](./docs/playbook.md) · [ROI](#roi)
+[Install](#install) · [Modes](#modes) · [What you get](#what-you-get) · [Playbook](./docs/playbook.md) · [Context Engineering](./docs/context-engineering.md) · [Deck](https://heisenberg-alt.github.io/octerse/) · [ROI](#roi)
 
 Octerse is a one-line installer that drops a tightly-scoped
 `.github/copilot-instructions.md`, VS Code Copilot Chat settings, and a `gh`
@@ -52,8 +52,9 @@ irm https://raw.githubusercontent.com/heisenberg-alt/octerse/main/install.ps1 | 
 
 The installer detects your repo, writes `.github/copilot-instructions.md`,
 merges `.vscode/settings.json`, and (optionally) drops `AGENTS.md`. Pass
-`--mode lite|full|ultra|enterprise`, `--dry-run` to preview, or
-`--uninstall` to remove. `bash install.sh --help` for the full flag matrix.
+`--mode lite|full|ultra|enterprise`, `--with-context` for context-discipline
+rules, `--dry-run` to preview, or `--uninstall` to remove.
+`bash install.sh --help` for the full flag matrix.
 
 ### Or via the `gh` CLI
 
@@ -93,8 +94,9 @@ gh octerse mode lite
 | Copilot inline suggestions | Unchanged — completions stay free under UBB |
 | Copilot commit messages | Conventional Commits, ≤50 char subject |
 | Copilot PR review | One-line findings: `path:line — sev: issue. fix.` |
-| `/octerse-commit`, `/octerse-review`, `/octerse-help` | Custom prompts, accessed via `chat.promptFiles` |
+| `/octerse-commit`, `/octerse-review`, `/octerse-context`, `/octerse-help` | Custom prompts, accessed via `chat.promptFiles` |
 | `gh octerse audit` | Flags bloat in your existing `copilot-instructions.md` |
+| `gh octerse context` | Audits the full context stack — per-turn token tax + findings |
 | `gh octerse spend` | Org Copilot $ this billing period; opens the UBB calculator pre-filled |
 | `gh octerse tips` | Eight-habit Monday-morning checklist |
 
@@ -102,6 +104,7 @@ gh octerse mode lite
 
 ```
 .github/copilot-instructions.md     ← active mode
+.github/instructions/octerse-context.instructions.md  ← optional, with --with-context
 .vscode/settings.json               ← merged, not overwritten
 .octerse/skills/                    ← /octerse-* prompt files
 AGENTS.md                           ← optional, with --with-agents
@@ -109,6 +112,27 @@ AGENTS.md                           ← optional, with --with-agents
 ```
 
 Nothing outside these paths is touched. `--uninstall` removes them all.
+
+## Context
+
+The [context engineering guide](./docs/context-engineering.md) is wired into
+the tool as a working stack:
+
+```sh
+gh octerse context                       # audit the per-turn context tax
+gh octerse context --json                # machine-readable
+bash install.sh --with-context           # install context-discipline rules
+```
+
+- **`gh octerse context`** scans every always-on file
+  (`copilot-instructions.md`, `AGENTS.md`, `.github/instructions/*.instructions.md`),
+  prints lines / bytes / ~tokens per turn, and flags: files over budget,
+  unscoped `applyTo` globs, and unshrunk MCP configs.
+- **`--with-context`** drops `.github/instructions/octerse-context.instructions.md`
+  — ≤40 lines of context-discipline rules (`@file:line` refs, sub-agent
+  delegation, tool-output filtering) loaded by VS Code and Copilot CLI.
+- **`/octerse-context`** in Copilot Chat prints the context engineering
+  quick-reference card.
 
 ## octerse-shrink (MCP middleware)
 
@@ -151,7 +175,8 @@ OCTERSE_SHRINK=0 …              # bypass at runtime, no config edit
 
 Octerse is the **output** lever. The other four cover the input side:
 
-1. **Context hygiene** — `/clear`, `/compact`, `/context`, `/usage`
+1. **Context hygiene** — `/clear`, `/compact`, `/context`, `/usage` — see the
+   [context engineering guide](./docs/context-engineering.md)
 2. **Prompt discipline** — `@file/path:line` refs, one task per prompt, `/plan` first
 3. **Octerse — output compression** *(this tool)*
 4. **Model selection** — cheapest tier that finishes the task; `/model` mid-session
@@ -257,8 +282,9 @@ generate real numbers for your model.
 | octerse — ultra | 141 | 12 | +92.3% |
 
 _Token counts are char/4 estimates; treat as ratios across modes, not as exact API token billing._  
-_Run: `.runs/20260508T143830Z` · 50 pairs._
+_Run: `.runs/20260508T204432Z` · 50 pairs._
 <!-- BENCHMARK-TABLE-END -->
+
 
 ## Privacy
 

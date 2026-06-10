@@ -67,6 +67,10 @@ re-sends ~2M input tokens even if your last prompt was 20 words.
 
 ### Lever 1 — Context hygiene
 
+> Deep dive: **[Context engineering for Copilot →](./context-engineering.md)**
+> — instruction files, #-mentions, prompt files, sub-agents, and session
+> management across VS Code and the CLI.
+
 Copilot CLI auto-compacts at ~80–95% of the window. Don't wait for it.
 
 | Command | Use |

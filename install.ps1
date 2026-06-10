@@ -13,6 +13,9 @@
   Overwrite existing files without prompting.
 .PARAMETER WithAgents
   Also write AGENTS.md.
+.PARAMETER WithContext
+  Also write .github/instructions/octerse-context.instructions.md
+  (context-discipline rules — see docs/context-engineering.md).
 .PARAMETER WithShrink
   Append a commented octerse-shrink example to .vscode/mcp.json (never overwrites).
 .PARAMETER SkipVscode
@@ -27,6 +30,7 @@ param(
   [switch]$DryRun,
   [switch]$Force,
   [switch]$WithAgents,
+  [switch]$WithContext,
   [switch]$WithShrink,
   [switch]$SkipVscode,
   [switch]$Uninstall
@@ -100,8 +104,11 @@ function Merge-VscodeSettings {
 # ---- uninstall -------------------------------------------------------------
 if ($Uninstall) {
   Write-Host "`n  octerse uninstall`n"
-  foreach ($p in @('.github/copilot-instructions.md', '.octerse', 'AGENTS.md')) {
+  foreach ($p in @('.github/copilot-instructions.md', '.github/instructions/octerse-context.instructions.md', '.octerse', 'AGENTS.md')) {
     if (Test-Path $p) { Run-Action "remove $p" { Remove-Item -Recurse -Force $p }; OK "removed $p" }
+  }
+  if ((Test-Path '.github/instructions') -and -not (Get-ChildItem '.github/instructions')) {
+    Remove-Item '.github/instructions'
   }
   if (Test-Path '.vscode/settings.json.octerse.bak') {
     Run-Action 'restore vscode settings' {
@@ -121,12 +128,13 @@ Write-Host "`n  octerse v$Version — mode: $Mode$dryTag`n"
 
 Fetch-File "instructions/$Mode.md" '.github/copilot-instructions.md'
 
-foreach ($skill in 'octerse-commit','octerse-review','octerse-help') {
+foreach ($skill in 'octerse-commit','octerse-review','octerse-help','octerse-context') {
   Fetch-File "skills/$skill.prompt.md" ".octerse/skills/$skill.prompt.md"
 }
 
 if (-not $SkipVscode) { Merge-VscodeSettings }
 if ($WithAgents)      { Fetch-File 'templates/AGENTS.md' 'AGENTS.md' }
+if ($WithContext)     { Fetch-File 'templates/context.instructions.md' '.github/instructions/octerse-context.instructions.md' }
 
 if ($WithShrink) {
   $mcpTarget = '.vscode/mcp.json'
@@ -177,6 +185,7 @@ if (-not $DryRun -and (Test-Path .gitignore)) {
 }
 
 $vsLine = if ($SkipVscode) { 'skipped' } else { '.vscode/settings.json' }
+$ctxLine = if ($WithContext) { '.github/instructions/octerse-context.instructions.md' } else { 'not installed (-WithContext to add)' }
 @"
 
   octerse installed.
@@ -184,12 +193,14 @@ $vsLine = if ($SkipVscode) { 'skipped' } else { '.vscode/settings.json' }
     Mode:                 $Mode
     Instructions file:    .github/copilot-instructions.md
     Skills directory:     .octerse/skills/
+    Context rules:        $ctxLine
     VS Code settings:     $vsLine
 
   Next:
     1. Open this repo in VS Code (reload the window if it was already open).
     2. In Copilot Chat, try /octerse-help for a quick reference.
-    3. Switch modes any time:  gh octerse mode lite
+    3. Audit your per-turn context tax:  gh octerse context
+    4. Switch modes any time:  gh octerse mode lite
 
   ROI calculator:  https://heisenberg-alt.github.io/usage-based-billing/
   Uninstall:       irm $RepoRaw/install.ps1 | iex; octerse-install -Uninstall

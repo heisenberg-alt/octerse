@@ -4,6 +4,34 @@ All notable changes to **octerse** are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`gh octerse context`** — audit of the full context stack. Scans the
+  always-on layer (`.github/copilot-instructions.md`, `AGENTS.md`,
+  `.github/instructions/*.instructions.md`), prints lines / bytes /
+  estimated tokens per turn, counts on-demand prompt files and MCP
+  servers, and flags: files over the 80-line budget, `*.instructions.md`
+  without a scoping `applyTo` glob, missing context-discipline rules, and
+  unshrunk `mcp.json` configs. `--json` for machine-readable output.
+- **`--with-context` / `-WithContext`** installer flag — writes
+  `.github/instructions/octerse-context.instructions.md`, a ≤40-line
+  context-discipline payload (read `@file:line` not directories, delegate
+  exploration to sub-agents, filter tool output at the source). Removed by
+  `--uninstall`.
+- **`/octerse-context`** skill — context engineering quick-reference card,
+  installed alongside the existing `/octerse-*` prompt files.
+- **`docs/context-engineering.md`** — the context stack, four levers
+  (persistent instructions, per-request attachments, reusable workflows,
+  session management), anti-patterns, and adoption checklist for Copilot
+  in VS Code + Copilot CLI. Cross-linked from README and the playbook.
+- **Pitch deck** — self-contained HTML deck in [`deck/`](./deck/)
+  (Apple-style typography × GitHub Primer dark palette, zero dependencies;
+  keyboard / swipe / scroll navigation). Deployed to GitHub Pages via
+  [`.github/workflows/pages.yml`](./.github/workflows/pages.yml).
+- 13 bats cases in [`tests/context.bats`](./tests/context.bats).
+
 ## [0.5.0] - 2025-01
 
 ### Added

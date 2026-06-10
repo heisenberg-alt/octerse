@@ -13,6 +13,7 @@ UNINSTALL=0
 FORCE=0
 WITH_AGENTS=0
 WITH_SHRINK=0
+WITH_CONTEXT=0
 SKIP_VSCODE=0
 
 usage() {
@@ -34,6 +35,9 @@ Flags:
   --dry-run           preview file writes; touch nothing
   --force             overwrite existing files without prompting
   --with-agents       also drop AGENTS.md (for Copilot CLI / agent contexts)
+  --with-context      also drop .github/instructions/octerse-context.instructions.md
+                      (context-discipline rules: @file:line refs, sub-agent
+                      delegation, tool-output filtering — see docs/context-engineering.md)
   --with-shrink       append a commented octerse-shrink example to .vscode/mcp.json
                       (octerse-shrink is the MCP middleware that compresses
                       tools/list descriptions — see mcp-servers/octerse-shrink/)
@@ -51,6 +55,7 @@ while (( $# )); do
     --dry-run)      DRY_RUN=1; shift ;;
     --force)        FORCE=1; shift ;;
     --with-agents)  WITH_AGENTS=1; shift ;;
+    --with-context) WITH_CONTEXT=1; shift ;;
     --with-shrink)  WITH_SHRINK=1; shift ;;
     --skip-vscode)  SKIP_VSCODE=1; shift ;;
     --uninstall)    UNINSTALL=1; shift ;;
@@ -142,12 +147,14 @@ merge_vscode_settings() {
 # ---- uninstall -------------------------------------------------------------
 if (( UNINSTALL )); then
   printf '\n  octerse uninstall\n\n'
-  for path in .github/copilot-instructions.md .octerse AGENTS.md; do
+  for path in .github/copilot-instructions.md .github/instructions/octerse-context.instructions.md .octerse AGENTS.md; do
     if [[ -e "$path" ]]; then
       run "rm -rf '$path'"
       ok "removed $path"
     fi
   done
+  # drop .github/instructions if octerse was the only occupant
+  rmdir .github/instructions 2>/dev/null || true
   if [[ -f .vscode/settings.json.octerse.bak ]]; then
     run "mv .vscode/settings.json.octerse.bak .vscode/settings.json"
     ok "restored .vscode/settings.json from backup"
@@ -166,7 +173,7 @@ printf '\n  octerse v%s — mode: %s%s\n\n' \
 fetch "instructions/${MODE}.md" ".github/copilot-instructions.md"
 
 # 2. Skills
-for skill in octerse-commit octerse-review octerse-help; do
+for skill in octerse-commit octerse-review octerse-help octerse-context; do
   fetch "skills/${skill}.prompt.md" ".octerse/skills/${skill}.prompt.md"
 done
 
@@ -178,6 +185,11 @@ fi
 # 4. AGENTS.md (optional)
 if (( WITH_AGENTS )); then
   fetch "templates/AGENTS.md" "AGENTS.md"
+fi
+
+# 4a. Context-discipline instructions (optional)
+if (( WITH_CONTEXT )); then
+  fetch "templates/context.instructions.md" ".github/instructions/octerse-context.instructions.md"
 fi
 
 # 4b. octerse-shrink hint in .vscode/mcp.json (optional, never auto-rewrites)
@@ -237,12 +249,14 @@ cat <<EOF
     Mode:                 $MODE
     Instructions file:    .github/copilot-instructions.md
     Skills directory:     .octerse/skills/
+    Context rules:        $( (( WITH_CONTEXT )) && echo '.github/instructions/octerse-context.instructions.md' || echo 'not installed (--with-context to add)' )
     VS Code settings:     $( (( SKIP_VSCODE )) && echo 'skipped' || echo '.vscode/settings.json' )
 
   Next:
     1. Open this repo in VS Code (reload the window if it was already open).
     2. In Copilot Chat, try /octerse-help for a quick reference.
-    3. Switch modes any time:  gh octerse mode lite
+    3. Audit your per-turn context tax:  gh octerse context
+    4. Switch modes any time:  gh octerse mode lite
 
   ROI calculator:  https://heisenberg-alt.github.io/usage-based-billing/
   Uninstall:       bash install.sh --uninstall

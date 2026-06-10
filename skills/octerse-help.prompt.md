@@ -15,6 +15,7 @@ Modes        /octerse mode lite           keep grammar, drop filler
 
 Skills       /octerse-commit              terse Conventional Commit message
              /octerse-review              one-line PR review findings
+             /octerse-context             context engineering quick reference
              /octerse-help                this card
 
 CLI          gh octerse install [--mode <m>]
@@ -22,6 +23,7 @@ CLI          gh octerse install [--mode <m>]
              gh octerse uninstall
              gh octerse stats
              gh octerse audit             flag bloat in copilot-instructions.md
+             gh octerse context           per-turn context tax + findings
              gh octerse tips              eight-habit checklist
 
 Starter kit  /clear                       reset context between unrelated tasks
