@@ -55,7 +55,7 @@
       "prompt_bytes": 148,
       "tokens_in": 90,
       "tokens_out": 403,
-      "wall_seconds": 0.0187
+      "wall_seconds": 0.0136
     },
     {
       "backend": "stub",
@@ -69,7 +69,7 @@
       "prompt_bytes": 147,
       "tokens_in": 89,
       "tokens_out": 205,
-      "wall_seconds": 0.0185
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -83,7 +83,7 @@
       "prompt_bytes": 124,
       "tokens_in": 84,
       "tokens_out": 142,
-      "wall_seconds": 0.0186
+      "wall_seconds": 0.0133
     },
     {
       "backend": "stub",
@@ -97,7 +97,7 @@
       "prompt_bytes": 145,
       "tokens_in": 89,
       "tokens_out": 114,
-      "wall_seconds": 0.0198
+      "wall_seconds": 0.013
     },
     {
       "backend": "stub",
@@ -111,7 +111,7 @@
       "prompt_bytes": 218,
       "tokens_in": 107,
       "tokens_out": 174,
-      "wall_seconds": 0.0185
+      "wall_seconds": 0.0134
     },
     {
       "backend": "stub",
@@ -125,7 +125,7 @@
       "prompt_bytes": 68,
       "tokens_in": 70,
       "tokens_out": 167,
-      "wall_seconds": 0.0187
+      "wall_seconds": 0.0132
     },
     {
       "backend": "stub",
@@ -139,7 +139,7 @@
       "prompt_bytes": 93,
       "tokens_in": 76,
       "tokens_out": 124,
-      "wall_seconds": 0.018
+      "wall_seconds": 0.0131
     },
     {
       "backend": "stub",
@@ -153,7 +153,7 @@
       "prompt_bytes": 165,
       "tokens_in": 94,
       "tokens_out": 177,
-      "wall_seconds": 0.0184
+      "wall_seconds": 0.0138
     },
     {
       "backend": "stub",
@@ -167,7 +167,7 @@
       "prompt_bytes": 186,
       "tokens_in": 99,
       "tokens_out": 212,
-      "wall_seconds": 0.0188
+      "wall_seconds": 0.0134
     },
     {
       "backend": "stub",
@@ -181,7 +181,7 @@
       "prompt_bytes": 153,
       "tokens_in": 90,
       "tokens_out": 116,
-      "wall_seconds": 0.0182
+      "wall_seconds": 0.013
     },
     {
       "backend": "stub",
@@ -195,7 +195,7 @@
       "prompt_bytes": 148,
       "tokens_in": 572,
       "tokens_out": 38,
-      "wall_seconds": 0.019
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -209,7 +209,7 @@
       "prompt_bytes": 147,
       "tokens_in": 571,
       "tokens_out": 49,
-      "wall_seconds": 0.0188
+      "wall_seconds": 0.0136
     },
     {
       "backend": "stub",
@@ -223,7 +223,7 @@
       "prompt_bytes": 124,
       "tokens_in": 566,
       "tokens_out": 22,
-      "wall_seconds": 0.0185
+      "wall_seconds": 0.0143
     },
     {
       "backend": "stub",
@@ -237,7 +237,7 @@
       "prompt_bytes": 145,
       "tokens_in": 571,
       "tokens_out": 16,
-      "wall_seconds": 0.0191
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -251,7 +251,7 @@
       "prompt_bytes": 218,
       "tokens_in": 589,
       "tokens_out": 19,
-      "wall_seconds": 0.0189
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -265,7 +265,7 @@
       "prompt_bytes": 68,
       "tokens_in": 552,
       "tokens_out": 24,
-      "wall_seconds": 0.0196
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -279,7 +279,7 @@
       "prompt_bytes": 93,
       "tokens_in": 558,
       "tokens_out": 17,
-      "wall_seconds": 0.0181
+      "wall_seconds": 0.0133
     },
     {
       "backend": "stub",
@@ -293,7 +293,7 @@
       "prompt_bytes": 165,
       "tokens_in": 576,
       "tokens_out": 19,
-      "wall_seconds": 0.0243
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -307,7 +307,7 @@
       "prompt_bytes": 186,
       "tokens_in": 581,
       "tokens_out": 19,
-      "wall_seconds": 0.0183
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -321,7 +321,7 @@
       "prompt_bytes": 153,
       "tokens_in": 572,
       "tokens_out": 8,
-      "wall_seconds": 0.0183
+      "wall_seconds": 0.0131
     },
     {
       "backend": "stub",
@@ -335,7 +335,7 @@
       "prompt_bytes": 148,
       "tokens_in": 73,
       "tokens_out": 70,
-      "wall_seconds": 0.0188
+      "wall_seconds": 0.0133
     },
     {
       "backend": "stub",
@@ -349,7 +349,7 @@
       "prompt_bytes": 147,
       "tokens_in": 73,
       "tokens_out": 63,
-      "wall_seconds": 0.0187
+      "wall_seconds": 0.0133
     },
     {
       "backend": "stub",
@@ -363,7 +363,7 @@
       "prompt_bytes": 124,
       "tokens_in": 67,
       "tokens_out": 31,
-      "wall_seconds": 0.0182
+      "wall_seconds": 0.0133
     },
     {
       "backend": "stub",
@@ -377,7 +377,7 @@
       "prompt_bytes": 145,
       "tokens_in": 72,
       "tokens_out": 16,
-      "wall_seconds": 0.0182
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -391,7 +391,7 @@
       "prompt_bytes": 218,
       "tokens_in": 90,
       "tokens_out": 44,
-      "wall_seconds": 0.0178
+      "wall_seconds": 0.0131
     },
     {
       "backend": "stub",
@@ -405,7 +405,7 @@
       "prompt_bytes": 68,
       "tokens_in": 53,
       "tokens_out": 34,
-      "wall_seconds": 0.0182
+      "wall_seconds": 0.0129
     },
     {
       "backend": "stub",
@@ -419,7 +419,7 @@
       "prompt_bytes": 93,
       "tokens_in": 59,
       "tokens_out": 33,
-      "wall_seconds": 0.0185
+      "wall_seconds": 0.0148
     },
     {
       "backend": "stub",
@@ -433,7 +433,7 @@
       "prompt_bytes": 165,
       "tokens_in": 77,
       "tokens_out": 55,
-      "wall_seconds": 0.018
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -447,7 +447,7 @@
       "prompt_bytes": 186,
       "tokens_in": 82,
       "tokens_out": 36,
-      "wall_seconds": 0.0188
+      "wall_seconds": 0.0132
     },
     {
       "backend": "stub",
@@ -461,7 +461,7 @@
       "prompt_bytes": 153,
       "tokens_in": 74,
       "tokens_out": 13,
-      "wall_seconds": 0.0187
+      "wall_seconds": 0.0136
     },
     {
       "backend": "stub",
@@ -475,7 +475,7 @@
       "prompt_bytes": 148,
       "tokens_in": 557,
       "tokens_out": 49,
-      "wall_seconds": 0.0182
+      "wall_seconds": 0.014
     },
     {
       "backend": "stub",
@@ -489,7 +489,7 @@
       "prompt_bytes": 147,
       "tokens_in": 557,
       "tokens_out": 63,
-      "wall_seconds": 0.0183
+      "wall_seconds": 0.0134
     },
     {
       "backend": "stub",
@@ -503,7 +503,7 @@
       "prompt_bytes": 124,
       "tokens_in": 551,
       "tokens_out": 23,
-      "wall_seconds": 0.0187
+      "wall_seconds": 0.0139
     },
     {
       "backend": "stub",
@@ -517,7 +517,7 @@
       "prompt_bytes": 145,
       "tokens_in": 557,
       "tokens_out": 16,
-      "wall_seconds": 0.0188
+      "wall_seconds": 0.0136
     },
     {
       "backend": "stub",
@@ -531,7 +531,7 @@
       "prompt_bytes": 218,
       "tokens_in": 575,
       "tokens_out": 27,
-      "wall_seconds": 0.0186
+      "wall_seconds": 0.013
     },
     {
       "backend": "stub",
@@ -545,7 +545,7 @@
       "prompt_bytes": 68,
       "tokens_in": 537,
       "tokens_out": 29,
-      "wall_seconds": 0.0187
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -559,7 +559,7 @@
       "prompt_bytes": 93,
       "tokens_in": 544,
       "tokens_out": 24,
-      "wall_seconds": 0.0183
+      "wall_seconds": 0.0138
     },
     {
       "backend": "stub",
@@ -573,7 +573,7 @@
       "prompt_bytes": 165,
       "tokens_in": 562,
       "tokens_out": 21,
-      "wall_seconds": 0.0185
+      "wall_seconds": 0.0138
     },
     {
       "backend": "stub",
@@ -587,7 +587,7 @@
       "prompt_bytes": 186,
       "tokens_in": 567,
       "tokens_out": 36,
-      "wall_seconds": 0.0183
+      "wall_seconds": 0.0134
     },
     {
       "backend": "stub",
@@ -601,7 +601,7 @@
       "prompt_bytes": 153,
       "tokens_in": 558,
       "tokens_out": 10,
-      "wall_seconds": 0.0179
+      "wall_seconds": 0.0138
     },
     {
       "backend": "stub",
@@ -615,7 +615,7 @@
       "prompt_bytes": 148,
       "tokens_in": 353,
       "tokens_out": 20,
-      "wall_seconds": 0.018
+      "wall_seconds": 0.013
     },
     {
       "backend": "stub",
@@ -629,7 +629,7 @@
       "prompt_bytes": 147,
       "tokens_in": 353,
       "tokens_out": 35,
-      "wall_seconds": 0.0183
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -643,7 +643,7 @@
       "prompt_bytes": 124,
       "tokens_in": 347,
       "tokens_out": 8,
-      "wall_seconds": 0.0188
+      "wall_seconds": 0.0131
     },
     {
       "backend": "stub",
@@ -657,7 +657,7 @@
       "prompt_bytes": 145,
       "tokens_in": 353,
       "tokens_out": 13,
-      "wall_seconds": 0.0192
+      "wall_seconds": 0.0132
     },
     {
       "backend": "stub",
@@ -671,7 +671,7 @@
       "prompt_bytes": 218,
       "tokens_in": 371,
       "tokens_out": 9,
-      "wall_seconds": 0.0184
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -685,7 +685,7 @@
       "prompt_bytes": 68,
       "tokens_in": 333,
       "tokens_out": 12,
-      "wall_seconds": 0.0182
+      "wall_seconds": 0.0135
     },
     {
       "backend": "stub",
@@ -699,7 +699,7 @@
       "prompt_bytes": 93,
       "tokens_in": 340,
       "tokens_out": 8,
-      "wall_seconds": 0.0184
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -713,7 +713,7 @@
       "prompt_bytes": 165,
       "tokens_in": 358,
       "tokens_out": 14,
-      "wall_seconds": 0.019
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -727,7 +727,7 @@
       "prompt_bytes": 186,
       "tokens_in": 363,
       "tokens_out": 14,
-      "wall_seconds": 0.0181
+      "wall_seconds": 0.0137
     },
     {
       "backend": "stub",
@@ -741,10 +741,10 @@
       "prompt_bytes": 153,
       "tokens_in": 354,
       "tokens_out": 8,
-      "wall_seconds": 0.0184
+      "wall_seconds": 0.014
     }
   ],
-  "run": ".runs/20260508T204432Z",
+  "run": ".runs/20260610T230240Z",
   "table": [
     {
       "median_tokens_out": 170,

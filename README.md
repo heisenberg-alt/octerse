@@ -282,9 +282,8 @@ generate real numbers for your model.
 | octerse — ultra | 141 | 12 | +92.3% |
 
 _Token counts are char/4 estimates; treat as ratios across modes, not as exact API token billing._  
-_Run: `.runs/20260508T204432Z` · 50 pairs._
+_Run: `.runs/20260610T230240Z` · 50 pairs._
 <!-- BENCHMARK-TABLE-END -->
-
 
 ## Privacy
 
