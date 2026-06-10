@@ -84,10 +84,11 @@ ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 
 run() {
+  # Execute argv directly — no eval, so paths with quotes/spaces are safe.
   if (( DRY_RUN )); then
     say "[dry-run] $*"
   else
-    eval "$@"
+    "$@"
   fi
 }
 
@@ -98,11 +99,11 @@ fetch() {
     warn "exists, keeping: $dst (use --force to overwrite)"
     return 0
   fi
-  run "mkdir -p '$(dirname "$dst")'"
+  run mkdir -p "$(dirname "$dst")"
   if [[ -d "${OCTERSE_LOCAL_SRC:-}/$src" || -f "${OCTERSE_LOCAL_SRC:-}/$src" ]]; then
-    run "cp '${OCTERSE_LOCAL_SRC}/$src' '$dst'"
+    run cp "${OCTERSE_LOCAL_SRC}/$src" "$dst"
   else
-    run "curl -fsSL '$REPO_RAW/$src' -o '$dst'"
+    run curl -fsSL "$REPO_RAW/$src" -o "$dst"
   fi
   ok "wrote $dst"
 }
@@ -149,14 +150,14 @@ if (( UNINSTALL )); then
   printf '\n  octerse uninstall\n\n'
   for path in .github/copilot-instructions.md .github/instructions/octerse-context.instructions.md .octerse AGENTS.md; do
     if [[ -e "$path" ]]; then
-      run "rm -rf '$path'"
+      run rm -rf "$path"
       ok "removed $path"
     fi
   done
   # drop .github/instructions if octerse was the only occupant
   rmdir .github/instructions 2>/dev/null || true
   if [[ -f .vscode/settings.json.octerse.bak ]]; then
-    run "mv .vscode/settings.json.octerse.bak .vscode/settings.json"
+    run mv .vscode/settings.json.octerse.bak .vscode/settings.json
     ok "restored .vscode/settings.json from backup"
   else
     warn ".vscode/settings.json was not auto-restored — remove octerse keys manually if you don't want them"

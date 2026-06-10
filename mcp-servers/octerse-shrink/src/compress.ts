@@ -168,6 +168,11 @@ function sliceOnWordBoundary(s: string, maxBytes: number): string {
   if (lastSpace > maxBytes / 2) {
     out = out.slice(0, lastSpace);
   }
+  // Never leave a backtick span torn open: an odd backtick count means the
+  // cap landed inside `code` — drop the dangling opener and what followed.
+  if ((out.match(/`/g)?.length ?? 0) % 2 === 1) {
+    out = out.slice(0, out.lastIndexOf('`'));
+  }
   return out.trimEnd();
 }
 

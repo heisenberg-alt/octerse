@@ -140,6 +140,13 @@ describe('compressDescription — rule 6: hard cap', () => {
     expect(r.bytesOut).toBeLessThanOrEqual(20);
   });
 
+  it('never leaves an unbalanced backtick when the cap lands inside a span', () => {
+    // Pad so the cap cuts inside the trailing backtick span.
+    const input = 'words '.repeat(36) + '`a very long inline code span here`';
+    const r = compressDescription(input, { hardCap: 240 });
+    expect((r.compressed.match(/`/g)?.length ?? 0) % 2).toBe(0);
+  });
+
   it('does not cap when input is short', () => {
     const r = compressDescription('short.');
     expect(r.compressed).toBe('short.');

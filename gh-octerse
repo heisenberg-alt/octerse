@@ -247,14 +247,15 @@ cmd_context() {
   local json_rows=""   # json fragments
 
   add_file() {
-    local f="$1" lines bytes
+    local f="$1" lines bytes esc
     # single wc pass: "-lc" prints lines then bytes
     read -r lines bytes <<<"$(wc -lc <"$f")"
     total_lines=$((total_lines + lines))
     total_bytes=$((total_bytes + bytes))
     rows="${rows}${f}|${lines}|${bytes}
 "
-    json_rows="${json_rows}${json_rows:+,}{\"path\":\"$f\",\"lines\":$lines,\"bytes\":$bytes,\"est_tokens\":$((bytes / 4))}"
+    esc=${f//\\/\\\\}; esc=${esc//\"/\\\"}   # JSON-escape the path
+    json_rows="${json_rows}${json_rows:+,}{\"path\":\"$esc\",\"lines\":$lines,\"bytes\":$bytes,\"est_tokens\":$((bytes / 4))}"
     ADDED_LINES=$lines
   }
 
@@ -554,18 +555,18 @@ cmd_spend() {
     billing_path="/organizations/$org/settings/billing/usage?year=$(date -u +%Y)&month=$(date -u +%-m)"
   fi
 
-  local metrics_json billing_json
-  if ! metrics_json=$(spend_api "$metrics_path" 2>/tmp/octerse-spend-err.$$); then
-    spend_explain_error "$(cat /tmp/octerse-spend-err.$$)" "$scope_label" "copilot metrics"
-    rm -f /tmp/octerse-spend-err.$$; return 1
+  local metrics_json billing_json err_tmp
+  err_tmp=$(mktemp -t octerse-spend.XXXXXX) || { echo "octerse spend: mktemp failed" >&2; return 1; }
+  if ! metrics_json=$(spend_api "$metrics_path" 2>"$err_tmp"); then
+    spend_explain_error "$(cat "$err_tmp")" "$scope_label" "copilot metrics"
+    rm -f "$err_tmp"; return 1
   fi
-  if ! billing_json=$(spend_api "$billing_path" 2>/tmp/octerse-spend-err.$$); then
-    spend_explain_error "$(cat /tmp/octerse-spend-err.$$)" "$scope_label" "billing usage"
-    rm -f /tmp/octerse-spend-err.$$
+  if ! billing_json=$(spend_api "$billing_path" 2>"$err_tmp"); then
+    spend_explain_error "$(cat "$err_tmp")" "$scope_label" "billing usage"
     # billing endpoint is the more flaky one — degrade gracefully
     billing_json='{"usageItems":[]}'
   fi
-  rm -f /tmp/octerse-spend-err.$$
+  rm -f "$err_tmp"
 
   # ---- extract (defensive: API shape is in preview, schema may shift) -----
   # metrics is an array of daily summaries; we want latest active users + sum of chats

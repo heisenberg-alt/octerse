@@ -198,8 +198,11 @@ export function runProxy(opts: ProxyOptions): Promise<number> {
           }
         }
       }
-      if (raw && typeof raw === 'object' && 'id' in (raw as object)) {
-        pending.delete((raw as { id: string | number }).id);
+      if (isResponse(raw)) {
+        // Only responses settle a pending entry. Server-initiated *requests*
+        // also carry an id, but live in an independent id namespace —
+        // deleting on those would orphan an in-flight client request.
+        pending.delete(raw.id);
       }
       // Echo back to client using the framing the *client* used.
       stdout.write(inFramer.encodeAs(inFramer.framing, out));
