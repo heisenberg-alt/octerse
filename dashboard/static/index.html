@@ -76,6 +76,36 @@ body {
 }
 code, .mono { font-family: Consolas, "Courier New", Courier, monospace; }
 
+/* ---------- auth overlay ---------- */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--cp-overlay); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-overlay[hidden] { display: none; }
+.auth-card {
+  background: var(--cp-surface); border: 1px solid var(--cp-border);
+  border-radius: 12px; box-shadow: var(--cp-shadow);
+  padding: 32px; max-width: 440px; width: 92%; text-align: center;
+}
+.auth-card h2 { font-size: 18px; margin-bottom: 8px; }
+.auth-card p { color: var(--cp-text-muted); font-size: 13px; margin-bottom: 18px; }
+.auth-btn {
+  background: var(--cp-accent); color: var(--cp-accent-fg);
+  border: none; border-radius: 8px; padding: 10px 22px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.auth-btn:hover { background: var(--cp-accent-hover); }
+.auth-step { margin-top: 18px; font-size: 14px; }
+.auth-step .code {
+  display: inline-block; font-size: 24px; letter-spacing: 4px;
+  padding: 8px 16px; margin: 10px 0; border-radius: 8px;
+  background: var(--cp-surface-soft); border: 1px solid var(--cp-border);
+}
+.auth-status { color: var(--cp-text-muted); font-size: 12px; margin-top: 10px; }
+.auth-error { color: var(--cp-danger); font-size: 13px; margin-top: 14px; }
+#scopeSeg button:disabled { opacity: .45; cursor: not-allowed; }
+
 /* ---------- layout ---------- */
 .topbar {
   display: flex; align-items: center; gap: 16px;
@@ -255,10 +285,11 @@ tbody tr:hover { background: var(--cp-accent-soft); }
   <div class="logo">Z</div>
   <div>
     <h1>Copilot AI Credits — Admin Panel</h1>
-    <div class="sub">Enterprise: <strong>zava-demos</strong> · Billing period: June 2026 · Mock data</div>
+    <div class="sub">Scope: <strong id="entName">—</strong> · Billing period: <span id="periodLabel">—</span> · <span id="sourceBadge">connecting…</span></div>
   </div>
   <div class="spacer"></div>
-  <span class="pill">Resets <strong>Jul 1, 00:00 UTC</strong></span>
+  <span class="pill" id="resetsPill" hidden>Resets <strong id="resetsAt"></strong></span>
+  <button class="theme-toggle" id="logoutBtn" hidden>Sign out</button>
   <button class="theme-toggle" id="themeToggle">◐ Theme</button>
 </div>
 
@@ -280,7 +311,7 @@ tbody tr:hover { background: var(--cp-accent-soft); }
   <!-- enterprise pool + model mix -->
   <div class="grid row2">
     <div class="card">
-      <h3>Enterprise credit pool — zava-demos</h3>
+      <h3 id="poolTitle">Credit pool</h3>
       <div class="pool-wrap">
         <div class="gauge">
           <svg width="170" height="170" viewBox="0 0 170 170">
@@ -323,7 +354,7 @@ tbody tr:hover { background: var(--cp-accent-soft); }
   <div class="card" style="margin-bottom:20px">
     <h3 id="roiTitle">Agent ROI — (value of agent output − token cost) ÷ token cost</h3>
     <div class="roi-note">
-      Value proxy: merged LOC × <span class="mono" id="roiValuePerLoc"></span>/LOC · Token cost: gross credits × $0.01.
+      Value proxy: merged LOC × <span class="mono" id="roiValuePerLoc"></span>/LOC · Token cost: gross credits × <span class="mono" id="roiPrice"></span>.
       Optimizing cost when output value is zero is useless work — and raising value usually <em>means</em> trimming tokens:
       less irrelevant context = better answers <em>and</em> a smaller bill.
     </div>
@@ -360,23 +391,39 @@ tbody tr:hover { background: var(--cp-accent-soft); }
   </div>
 
   <div class="foot">
-    Mock data. Live sources: <code>GET /enterprises/{ent}/settings/billing/ai_credit/usage?user=…</code> ·
-    <code>GET /enterprises/{ent}/settings/billing/budgets</code> ·
-    <code>GET /repos/{o}/{r}/stats/contributors</code>
+    Live sources: <code>GET /orgs/{org}/copilot/metrics</code> ·
+    <code>GET /organizations/{org}/settings/billing/usage</code> ·
+    <code>GET /organizations/{org}/settings/billing/budgets</code> ·
+    <code>GET /orgs/{org}/copilot/billing/seats</code><span id="estimatedNote"></span>
+    <div id="apiErrors" style="margin-top:6px;color:var(--cp-warning)"></div>
+  </div>
+</div>
+
+<!-- admin sign-in overlay -->
+<div class="auth-overlay" id="authOverlay" hidden>
+  <div class="auth-card">
+    <h2>Admin sign-in required</h2>
+    <p>Sign in with GitHub to view live Copilot metrics and billing.
+       You must be an <strong>organization admin</strong> of an allowed org.</p>
+    <button class="auth-btn" id="authStart">Sign in with GitHub</button>
+    <div class="auth-step" id="authStep" hidden>
+      Enter this code at <a id="authLink" href="#" target="_blank" rel="noopener"></a>:
+      <div class="code mono" id="authCode"></div>
+      <div class="auth-status">Waiting for authorization…</div>
+    </div>
+    <div class="auth-error" id="authError" hidden></div>
   </div>
 </div>
 
 <script>
 /* ============================================================
-   MOCK DATA — shaped like the real GitHub billing API responses
+   LIVE DATA — populated from GET /api/dashboard (shapes mirror
+   the GitHub Copilot metrics + billing usage APIs)
    ============================================================ */
-const ENTERPRISE = {
-  name: "zava-demos",
-  poolTotal: 250000,          // ai-credits purchased / included for period
-  poolConsumed: 162340,       // gross consumed enterprise-wide MTD
-  netOverageUSD: 412.50,      // billed beyond included allowance
-  pricePerUnit: 0.01,
-};
+let ENTERPRISE = { name: "—", poolTotal: 0, poolConsumed: 0, netOverageUSD: 0, pricePerUnit: 0.04 };
+let PERIOD = { day: 1, daysInMonth: 30, label: "—", resets: "" };
+let DAYS = [];
+let ESTIMATED = [];
 
 /* Agent ROI = (value of agent output − token cost) / token cost
    Value proxy (mock): merged LOC × VALUE_PER_LOC dollars.
@@ -393,45 +440,12 @@ function roiBadge(r) {
   return `<span class="roi-badge ${cls}">${r.toFixed(1)}×</span>`;
 }
 
-const MODELS = [
-  { name: "Claude Opus 4.7",    color: "var(--cp-accent)" },
-  { name: "GPT-5",              color: "var(--cp-link)" },
-  { name: "Claude Sonnet 4.5",  color: "var(--cp-success)" },
-  { name: "Gemini 3 Pro",       color: "var(--cp-warning)" },
-  { name: "o4-mini",            color: "var(--cp-border-strong)" },
-];
-
-const ORGS = [
-  { name: "Zava-app-modernization", credits: 68420, loc: 184200, models: [34200, 18400, 9800, 4100, 1920] },
-  { name: "Copilot-Genie",          credits: 52110, loc: 121500, models: [21900, 15600, 8900, 3800, 1910] },
-  { name: "Zava-org",               credits: 41810, loc:  98400, models: [16800, 12400, 7600, 3300, 1710] },
-];
-
-const TEAMS = [
-  { name: "platform-core",  org: "Zava-app-modernization", credits: 28900, loc: 84200, models: [14800, 7200, 4100, 1900, 900] },
-  { name: "web-frontend",   org: "Zava-app-modernization", credits: 21400, loc: 64800, models: [9800, 6400, 3200, 1300, 700] },
-  { name: "data-eng",       org: "Copilot-Genie",          credits: 24600, loc: 41200, models: [11200, 7400, 3900, 1500, 600] },
-  { name: "ml-research",    org: "Copilot-Genie",          credits: 27510, loc: 38900, models: [14100, 8200, 3400, 1200, 610] },
-  { name: "sre-ops",        org: "Zava-org",               credits: 18200, loc: 52600, models: [7200, 5600, 3500, 1300, 600] },
-];
-
-const USERS = [
-  { login: "heisenberg-alt", team: "platform-core", credits: 9120, net: 0,     topModel: "Claude Opus 4.7", loc: 24800, budget: { amount: 12000, consumed: 9120,  enforce: true  } },
-  { login: "monalisa",       team: "platform-core", credits: 7480, net: 0,     topModel: "GPT-5",            loc: 31200, budget: { amount: 10000, consumed: 7480,  enforce: true  } },
-  { login: "octocat",        team: "web-frontend",  credits: 6840, net: 18.4,  topModel: "Claude Opus 4.7",  loc: 18700, budget: { amount:  6000, consumed: 6840,  enforce: false } },
-  { login: "hubot",          team: "data-eng",      credits: 5910, net: 0,     topModel: "Claude Sonnet 4.5",loc: 12400, budget: { amount:  8000, consumed: 5910,  enforce: true  } },
-  { login: "nat",            team: "ml-research",   credits: 8240, net: 22.4,  topModel: "Claude Opus 4.7",  loc:  8900, budget: { amount:  8000, consumed: 8240,  enforce: false } },
-  { login: "defunkt",        team: "sre-ops",       credits: 4310, net: 0,     topModel: "GPT-5",            loc: 16200, budget: { amount:  7000, consumed: 4310,  enforce: true  } },
-  { login: "mojombo",        team: "web-frontend",  credits: 3980, net: 0,     topModel: "Gemini 3 Pro",     loc: 14100, budget: { amount:  6000, consumed: 3980,  enforce: true  } },
-  { login: "pjhyett",        team: "data-eng",      credits: 5120, net: 0,     topModel: "GPT-5",            loc:  9800, budget: { amount:  8000, consumed: 5120,  enforce: true  } },
-];
-
-const ORG_BUDGETS = [
-  { scope: "organization", entity: "Zava-app-modernization", amount: 80000, consumed: 68420, enforce: false },
-  { scope: "organization", entity: "Copilot-Genie",          amount: 60000, consumed: 52110, enforce: true  },
-  { scope: "organization", entity: "Zava-org",               amount: 50000, consumed: 41810, enforce: true  },
-  { scope: "cost_center",  entity: "AI Initiatives",          amount: 30000, consumed: 17300, enforce: false },
-];
+const PALETTE = ["var(--cp-accent)", "var(--cp-link)", "var(--cp-success)", "var(--cp-warning)", "var(--cp-border-strong)"];
+let MODELS = [];
+let ORGS = [];
+let TEAMS = [];
+let USERS = [];
+let ORG_BUDGETS = [];
 
 // deterministic pseudo-random daily series (Jun 1–10, MTD)
 function dailySeries(seedTotal) {
@@ -468,8 +482,8 @@ function renderEntitySelect() {
     rows.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
   $("entitySelect").value = entity;
   $("scopeHint").textContent = scope === "org"
-    ? "Source: /enterprises/zava-demos/settings/billing/ai_credit/usage (grouped by org)"
-    : "Source: per-user billing API joined to team membership";
+    ? "Source: /orgs/{org}/copilot/metrics + /organizations/{org}/settings/billing/usage"
+    : "Team-level metrics not connected yet";
 }
 
 function renderKPIs() {
@@ -484,32 +498,32 @@ function renderKPIs() {
       <div class="delta">(value − token cost) ÷ token cost</div></div>
     <div class="card kpi"><h3>Credits consumed (gross)</h3>
       <div class="value">${fmt(credits)}</div>
-      <div class="delta up">▲ 12% vs May MTD</div></div>
-    <div class="card kpi"><h3>Net overage billed</h3>
-      <div class="value">${usd(rows === ORGS || entity === "ALL" ? ENTERPRISE.netOverageUSD : ENTERPRISE.netOverageUSD * credits / 162340)}</div>
-      <div class="delta warn">3 users past included allowance</div></div>
-    <div class="card kpi"><h3>LOC committed (MTD)</h3>
+      <div class="delta">${ESTIMATED.includes("credits") ? "~ chat-turn proxy (no premium SKU usage yet)" : "premium requests MTD"}</div></div>
+    <div class="card kpi"><h3>Net billed (Copilot)</h3>
+      <div class="value">${usd(entity === "ALL" ? ENTERPRISE.netOverageUSD : ENTERPRISE.netOverageUSD * (ENTERPRISE.poolConsumed ? credits / ENTERPRISE.poolConsumed : 0))}</div>
+      <div class="delta">billed beyond included allowance</div></div>
+    <div class="card kpi"><h3>LOC accepted (MTD)</h3>
       <div class="value">${fmt(loc)}</div>
-      <div class="delta up">▲ 8% vs May MTD</div></div>
+      <div class="delta">completion lines accepted</div></div>
     <div class="card kpi"><h3>LOC per credit</h3>
       <div class="value">${ratio.toFixed(1)}</div>
       <div class="delta">directional signal, not a KPI target</div></div>`;
 }
 
 function renderPool() {
-  const pct = ENTERPRISE.poolConsumed / ENTERPRISE.poolTotal;
+  const pct = ENTERPRISE.poolTotal ? ENTERPRISE.poolConsumed / ENTERPRISE.poolTotal : 0;
   const C = 2 * Math.PI * 72;
   const arc = $("gaugeArc");
   arc.setAttribute("stroke-dasharray", C);
   arc.setAttribute("stroke-dashoffset", C * (1 - pct));
   arc.setAttribute("stroke", pct > 0.9 ? "var(--cp-danger)" : pct > 0.75 ? "var(--cp-warning)" : "var(--cp-accent)");
   $("gaugePct").textContent = Math.round(pct * 100) + "%";
-  const remaining = ENTERPRISE.poolTotal - ENTERPRISE.poolConsumed;
-  const dayOfMonth = 11, daysInMonth = 30;
+  const remaining = Math.max(ENTERPRISE.poolTotal - ENTERPRISE.poolConsumed, 0);
+  const dayOfMonth = PERIOD.day || 1, daysInMonth = PERIOD.daysInMonth || 30;
   const burnRate = ENTERPRISE.poolConsumed / dayOfMonth;
   const projected = Math.round(burnRate * daysInMonth);
   $("poolStats").innerHTML = `
-    <div class="pool-stat"><span class="lbl">Pool size (included)</span><span class="val">${fmt(ENTERPRISE.poolTotal)} credits</span></div>
+    <div class="pool-stat"><span class="lbl">Pool size (budgets)</span><span class="val">${ENTERPRISE.poolTotal ? fmt(ENTERPRISE.poolTotal) + " credits" : "no budgets set"}</span></div>
     <div class="pool-stat"><span class="lbl">Consumed MTD</span><span class="val">${fmt(ENTERPRISE.poolConsumed)} credits</span></div>
     <div class="pool-stat"><span class="lbl">Remaining</span><span class="val" style="color:var(--cp-success)">${fmt(remaining)} credits</span></div>
     <div class="pool-stat"><span class="lbl">Projected month-end</span><span class="val" style="color:${projected > ENTERPRISE.poolTotal ? 'var(--cp-danger)' : 'var(--cp-text)'}">${fmt(projected)} credits</span></div>
@@ -518,9 +532,15 @@ function renderPool() {
 
 function renderDonut() {
   const rows = selectedRows();
-  const totals = MODELS.map((_, i) => rows.reduce((s, r) => s + r.models[i], 0));
+  const totals = MODELS.map((_, i) => rows.reduce((s, r) => s + (r.models[i] || 0), 0));
   const sum = totals.reduce((a, b) => a + b, 0);
   const svg = $("donut");
+  if (!MODELS.length || !sum) {
+    svg.innerHTML = "";
+    $("modelLegend").innerHTML = `<div class="item">No model data for this period</div>`;
+    $("modelTitle").textContent = "Model mix";
+    return;
+  }
   let offset = 25; // start at top
   svg.innerHTML = `<circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--cp-surface-soft)" stroke-width="6"></circle>`;
   totals.forEach((v, i) => {
@@ -539,25 +559,28 @@ function renderDonut() {
 function renderTrend() {
   const rows = selectedRows();
   const total = rows.reduce((s, r) => s + r.credits, 0);
-  const series = dailySeries(total);
-  const max = Math.max(...series);
+  const hasReal = DAYS.length > 0 && rows.some(r => Array.isArray(r.daily));
+  const series = hasReal
+    ? DAYS.map((_, i) => rows.reduce((s, r) => s + ((r.daily || [])[i] || 0), 0))
+    : dailySeries(total);
+  const labels = hasReal ? DAYS : series.map((_, i) => String(i + 1));
+  const max = Math.max(...series, 1);
   $("trendChart").innerHTML = series.map((v, i) => {
     const hPct = v / max * 100;
-    const included = Math.round(v * 0.85), overage = v - included;
     return `<div class="day">
-      <div class="tip">Jun ${i + 1}: ${fmt(v)} credits<br>incl. ${fmt(included)} · overage ${fmt(overage)}</div>
-      <div class="seg-a" style="height:${hPct * 0.85}%"></div>
-      <div class="seg-b" style="height:${hPct * 0.15}%"></div>
+      <div class="tip">${labels[i]}: ${fmt(v)}</div>
+      <div class="seg-a" style="height:${hPct}%"></div>
     </div>`;
   }).join("");
-  $("trendX").innerHTML = series.map((_, i) => `<span>${i + 1}</span>`).join("");
-  $("trendTitle").textContent = `Daily credit burn — June 2026 (${entity === "ALL" ? "all " + (scope === "org" ? "orgs" : "teams") : entity})`;
+  $("trendX").innerHTML = labels.map(l => `<span>${String(l).slice(-2)}</span>`).join("");
+  $("trendTitle").textContent = `Daily activity — ${PERIOD.label} (${entity === "ALL" ? "all " + (scope === "org" ? "orgs" : "teams") : entity})`;
 }
 
 function renderLocBars() {
   const rows = currentRows();
-  const maxC = Math.max(...rows.map(r => r.credits));
-  const maxL = Math.max(...rows.map(r => r.loc));
+  if (!rows.length) { $("locBars").innerHTML = `<div class="hint">No data for this period</div>`; return; }
+  const maxC = Math.max(...rows.map(r => r.credits), 1);
+  const maxL = Math.max(...rows.map(r => r.loc), 1);
   $("locBars").innerHTML = rows.map(r => `
     <div class="bar-row">
       <span class="lbl" title="${r.name}">${r.name}</span>
@@ -577,8 +600,10 @@ function renderLocBars() {
 function renderROI() {
   const rows = [...currentRows()].map(r => ({ ...r, roi: agentROI(r.loc, r.credits) }))
     .sort((a, b) => b.roi - a.roi);
+  if (!rows.length) { $("roiBars").innerHTML = `<div class="hint">No data for this period</div>`; $("roiValuePerLoc").textContent = "$" + VALUE_PER_LOC.toFixed(2); return; }
   const maxRoi = Math.max(...rows.map(r => r.roi), 1);
   $("roiValuePerLoc").textContent = "$" + VALUE_PER_LOC.toFixed(2);
+  $("roiPrice").textContent = "$" + ENTERPRISE.pricePerUnit.toFixed(2);
   $("roiBars").innerHTML = rows.map(r => {
     const value = r.loc * VALUE_PER_LOC;
     const cost = r.credits * ENTERPRISE.pricePerUnit;
@@ -614,10 +639,12 @@ function budgetRow(b) {
 
 function renderBudgets() {
   const userBudgets = USERS
-    .filter(u => scope === "org" || entity === "ALL" || u.team === entity)
+    .filter(u => u.budget && (scope === "org" || entity === "ALL" || u.team === entity))
     .map(u => ({ scope: "user", entity: u.login, amount: u.budget.amount, consumed: u.budget.consumed, enforce: u.budget.enforce }));
   const rows = scope === "org" ? [...ORG_BUDGETS, ...userBudgets] : userBudgets;
-  $("budgetBody").innerHTML = rows.map(budgetRow).join("");
+  $("budgetBody").innerHTML = rows.length
+    ? rows.map(budgetRow).join("")
+    : `<tr><td colspan="7" style="color:var(--cp-text-muted)">No budgets configured for this scope</td></tr>`;
   $("budgetTitle").textContent = scope === "org"
     ? "Budgets — org, cost-center & user scopes (ai_credits / premium_requests SKUs)"
     : `User-level budgets — ${entity === "ALL" ? "all teams" : entity}`;
@@ -625,23 +652,26 @@ function renderBudgets() {
 
 function renderUsers() {
   const rows = USERS.filter(u => scope === "org" || entity === "ALL" || u.team === entity);
-  $("userBody").innerHTML = rows
-    .sort((a, b) => b.credits - a.credits)
-    .map(u => {
-      const pct = u.budget.consumed / u.budget.amount;
-      const color = pct >= 1 ? "var(--cp-danger)" : pct >= 0.85 ? "var(--cp-warning)" : "var(--cp-success)";
-      return `<tr>
-        <td><span class="avatar">${u.login.slice(0, 2).toUpperCase()}</span>${u.login}</td>
-        <td><span class="tag">${u.team}</span></td>
-        <td class="r mono">${fmt(u.credits)}</td>
-        <td class="r mono">${u.net ? usd(u.net) : "—"}</td>
-        <td>${u.topModel}</td>
-        <td class="r mono">${fmt(u.loc)}</td>
-        <td class="r">${roiBadge(agentROI(u.loc, u.credits))}</td>
-        <td><div class="bp"><div class="track"><div class="fill" style="width:${Math.min(pct, 1) * 100}%;background:${color}"></div></div><span class="pct">${Math.round(pct * 100)}%</span></div></td>
-      </tr>`;
-    }).join("");
-  $("detailTitle").textContent = `Per-user detail — ${rows.length} users`;
+  const est = ESTIMATED.includes("user_credits") ? "~" : "";
+  $("userBody").innerHTML = rows.length
+    ? rows
+      .sort((a, b) => b.credits - a.credits)
+      .map(u => {
+        const pct = u.budget ? u.budget.consumed / u.budget.amount : 0;
+        const color = pct >= 1 ? "var(--cp-danger)" : pct >= 0.85 ? "var(--cp-warning)" : "var(--cp-success)";
+        return `<tr>
+          <td><span class="avatar">${u.login.slice(0, 2).toUpperCase()}</span>${u.login}</td>
+          <td><span class="tag">${u.team}</span></td>
+          <td class="r mono">${est}${fmt(u.credits)}</td>
+          <td class="r mono">${u.net ? usd(u.net) : "—"}</td>
+          <td>${u.topModel}</td>
+          <td class="r mono">${est}${fmt(u.loc)}</td>
+          <td class="r">${roiBadge(agentROI(u.loc, u.credits))}</td>
+          <td>${u.budget ? `<div class="bp"><div class="track"><div class="fill" style="width:${Math.min(pct, 1) * 100}%;background:${color}"></div></div><span class="pct">${Math.round(pct * 100)}%</span></div>` : "—"}</td>
+        </tr>`;
+      }).join("")
+    : `<tr><td colspan="8" style="color:var(--cp-text-muted)">No Copilot seat data available</td></tr>`;
+  $("detailTitle").textContent = `Per-user detail — ${rows.length} users${est ? " (credits/LOC are even-split estimates; no per-user billing API yet)" : ""}`;
 }
 
 function renderAll() {
@@ -671,7 +701,125 @@ $("themeToggle").addEventListener("click", () => {
   document.documentElement.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
 });
 
-renderAll();
+/* ============================================================
+   LIVE BACKEND — auth (GitHub device flow) + data loading
+   ============================================================ */
+const api = async (path, opts = {}) => {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  if (!r.ok) {
+    let detail = "";
+    try { detail = (await r.json()).detail || ""; } catch {}
+    const e = new Error(detail || ("HTTP " + r.status));
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+};
+
+function applyData(d) {
+  ENTERPRISE = d.enterprise;
+  PERIOD = d.period || PERIOD;
+  DAYS = d.days || [];
+  ESTIMATED = d.estimated || [];
+  MODELS = (d.models || []).map((m, i) => ({ name: m.name, color: PALETTE[i % PALETTE.length] }));
+  ORGS = d.orgs || [];
+  TEAMS = d.teams || [];
+  USERS = d.users || [];
+  ORG_BUDGETS = d.budgets || [];
+  scope = "org"; entity = "ALL";
+  $("entName").textContent = ENTERPRISE.name;
+  $("periodLabel").textContent = PERIOD.label || "—";
+  $("sourceBadge").textContent = "Live · refreshed " + new Date(d.generatedAt).toLocaleTimeString();
+  $("poolTitle").textContent = `Credit pool — ${ENTERPRISE.name}`;
+  if (PERIOD.resets) { $("resetsAt").textContent = PERIOD.resets; $("resetsPill").hidden = false; }
+  const teamBtn = document.querySelector('#scopeSeg button[data-scope="team"]');
+  teamBtn.disabled = TEAMS.length === 0;
+  teamBtn.title = TEAMS.length ? "" : "Team-level metrics not connected yet";
+  $("estimatedNote").textContent = ESTIMATED.length ? ` · ~ estimated fields: ${ESTIMATED.join(", ")}` : "";
+  const errs = d.errors
+    ? Object.entries(d.errors).flatMap(([org, srcs]) =>
+        Object.entries(srcs).map(([src, msg]) => `${org} · ${src}: ${msg}`))
+    : [];
+  $("apiErrors").textContent = errs.length ? "⚠ Unavailable sources — " + errs.join("  |  ") : "";
+  renderAll();
+}
+
+async function loadDashboard() {
+  $("sourceBadge").textContent = "loading…";
+  try {
+    applyData(await api("/api/dashboard"));
+    $("logoutBtn").hidden = false;
+  } catch (e) {
+    if (e.status === 401) showLogin();
+    else $("sourceBadge").textContent = "error loading data (" + e.message + ")";
+  }
+}
+
+function showLogin() { $("authOverlay").hidden = false; $("sourceBadge").textContent = "signed out"; }
+
+async function hasSession() {
+  try { await api("/api/auth/me"); return true; } catch { return false; }
+}
+
+/* Generation counter: a new sign-in click (or page state change) cancels
+   any previous poll loop instead of stacking another one. */
+let pollGen = 0;
+
+$("authStart").addEventListener("click", async () => {
+  $("authError").hidden = true;
+  const gen = ++pollGen;
+  try {
+    const d = await api("/api/auth/device/start", { method: "POST" });
+    $("authCode").textContent = d.user_code;
+    $("authLink").href = d.verification_uri;
+    $("authLink").textContent = d.verification_uri;
+    $("authStep").hidden = false;
+    const poll = async () => {
+      if (gen !== pollGen) return; // superseded by a newer sign-in attempt
+      // The session may have been established in another tab/window —
+      // if the cookie is already here, stop polling and load.
+      if (await hasSession()) { $("authOverlay").hidden = true; loadDashboard(); return; }
+      try {
+        const r = await api("/api/auth/device/poll", {
+          method: "POST", body: JSON.stringify({ pending_id: d.pending_id }),
+        });
+        if (gen !== pollGen) return;
+        if (r.status === "pending") { setTimeout(poll, (d.interval || 5) * 1000); return; }
+        if (r.status === "ok") { $("authOverlay").hidden = true; loadDashboard(); return; }
+        $("authError").textContent = r.detail || ("Sign-in failed: " + (r.error || "unknown"));
+      } catch (e) {
+        if (gen !== pollGen) return;
+        $("authError").textContent = "Sign-in failed: " + e.message;
+      }
+      $("authError").hidden = false;
+      $("authStep").hidden = true;
+    };
+    setTimeout(poll, (d.interval || 5) * 1000);
+  } catch (e) {
+    $("authError").textContent = "Could not start sign-in: " + e.message;
+    $("authError").hidden = false;
+  }
+});
+
+$("logoutBtn").addEventListener("click", async () => {
+  await api("/api/auth/logout", { method: "POST" }).catch(() => {});
+  location.reload();
+});
+
+// If the user authorized in another tab/window, pick up the session when
+// this tab regains focus instead of waiting on a stale device code.
+window.addEventListener("focus", async () => {
+  if (!$("authOverlay").hidden && await hasSession()) {
+    pollGen++;
+    $("authOverlay").hidden = true;
+    loadDashboard();
+  }
+});
+
+(async () => {
+  if (await hasSession()) loadDashboard();
+  else showLogin();
+})();
 </script>
 </body>
 </html>

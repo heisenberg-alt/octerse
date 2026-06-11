@@ -5,3 +5,6 @@
 node_modules/
 dist/
 .octerse/
+.venv/
+__pycache__/
+*.egg-info/

@@ -294,6 +294,10 @@ _Run: `.runs/20260610T230240Z` · 50 pairs._
 - **All other subcommands are offline.** `install`, `audit`, `tips`, `stats`,
   `mode`, `status` make zero network calls.
 - **`gh octerse stats`** reads only your git log + a local counter file.
+- **The admin dashboard** ([dashboard/](./dashboard)) is an optional,
+  self-hosted service. It also reads `api.github.com` exclusively, using each
+  signed-in admin's own GitHub token (held server-side only, never sent to the
+  browser). No telemetry, no third-party calls.
 - See [SECURITY.md](./SECURITY.md) for our vulnerability-disclosure policy.
 
 ## Compatibility
