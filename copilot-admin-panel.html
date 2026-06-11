@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Copilot AI Credits — Admin Panel</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  min-height: 100vh;
+  font-size: 14px;
+}
+code, .mono { font-family: Consolas, "Courier New", Courier, monospace; }
+
+/* ---------- layout ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 28px;
+  background: var(--cp-bg-elevated);
+  border-bottom: 1px solid var(--cp-border);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar .logo {
+  width: 34px; height: 34px; border-radius: 0.625rem;
+  background: var(--cp-accent); color: var(--cp-accent-fg);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+}
+.topbar h1 { font-size: 16px; font-weight: 600; }
+.topbar .sub { font-size: 12px; color: var(--cp-text-muted); }
+.topbar .spacer { flex: 1; }
+.pill {
+  font-size: 12px; padding: 4px 12px; border-radius: 999px;
+  border: 1px solid var(--cp-border); background: var(--cp-surface);
+  color: var(--cp-text-muted);
+}
+.pill strong { color: var(--cp-text); }
+.theme-toggle {
+  border: 1px solid var(--cp-border); background: var(--cp-surface);
+  color: var(--cp-text); border-radius: 0.625rem; padding: 6px 12px;
+  cursor: pointer; font-size: 13px; font-family: inherit;
+}
+.theme-toggle:hover { border-color: var(--cp-border-strong); }
+
+.container { max-width: 1280px; margin: 0 auto; padding: 24px 28px 56px; }
+
+/* ---------- tabs / scope switch ---------- */
+.controls { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.seg {
+  display: inline-flex; border: 1px solid var(--cp-border); border-radius: 0.625rem;
+  overflow: hidden; background: var(--cp-surface);
+}
+.seg button {
+  border: none; background: transparent; color: var(--cp-text-muted);
+  padding: 8px 18px; font-size: 13px; cursor: pointer; font-family: inherit;
+  border-right: 1px solid var(--cp-border);
+}
+.seg button:last-child { border-right: none; }
+.seg button.active { background: var(--cp-accent); color: var(--cp-accent-fg); font-weight: 600; }
+select {
+  border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text);
+  border-radius: 0.625rem; padding: 8px 12px; font-size: 13px; font-family: inherit;
+}
+.controls .hint { font-size: 12px; color: var(--cp-text-soft); margin-left: auto; }
+
+/* ---------- cards ---------- */
+.grid { display: grid; gap: 16px; }
+.kpis { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 20px; }
+.card {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+}
+.card h3 {
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--cp-text-muted); margin-bottom: 10px;
+}
+.kpi .value { font-size: 28px; font-weight: 700; line-height: 1.15; }
+.kpi .delta { font-size: 12px; margin-top: 6px; color: var(--cp-text-muted); }
+.kpi .delta.up { color: var(--cp-success); }
+.kpi .delta.down { color: var(--cp-danger); }
+.kpi .delta.warn { color: var(--cp-warning); }
+
+.row2 { grid-template-columns: 1.6fr 1fr; margin-bottom: 20px; }
+.row3 { grid-template-columns: 1fr 1fr; margin-bottom: 20px; }
+@media (max-width: 900px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+/* ---------- enterprise pool gauge ---------- */
+.pool-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.gauge { position: relative; width: 170px; height: 170px; flex-shrink: 0; }
+.gauge svg { transform: rotate(-90deg); }
+.gauge .center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.gauge .center .big { font-size: 26px; font-weight: 700; }
+.gauge .center .small { font-size: 11px; color: var(--cp-text-muted); }
+.pool-stats { flex: 1; min-width: 220px; display: grid; gap: 10px; }
+.pool-stat { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1px dashed var(--cp-border); padding-bottom: 8px; }
+.pool-stat:last-child { border-bottom: none; }
+.pool-stat .lbl { font-size: 12px; color: var(--cp-text-muted); }
+.pool-stat .val { font-weight: 600; font-size: 15px; }
+
+/* ---------- bars ---------- */
+.bar-row { display: grid; grid-template-columns: 150px 1fr 86px; align-items: center; gap: 12px; margin-bottom: 12px; }
+.bar-row .lbl { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 12px; border-radius: 999px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); overflow: hidden; display: flex; }
+.bar-fill { height: 100%; }
+.bar-row .num { font-size: 12px; color: var(--cp-text-muted); text-align: right; }
+
+/* ---------- donut + legend ---------- */
+.donut-wrap { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.legend { display: grid; gap: 8px; flex: 1; min-width: 200px; }
+.legend .item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.legend .sw { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.legend .pct { margin-left: auto; color: var(--cp-text-muted); font-size: 12px; }
+
+/* ---------- daily trend ---------- */
+.trend { display: flex; align-items: flex-end; gap: 5px; height: 130px; padding-top: 8px; }
+.trend .day { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; gap: 0; cursor: default; position: relative; }
+.trend .seg-a { background: var(--cp-accent); border-radius: 3px 3px 0 0; }
+.trend .seg-b { background: var(--cp-accent-soft); border-radius: 0 0 3px 3px; }
+.trend .day:hover .tip { opacity: 1; }
+.trend .tip {
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--cp-panel-strong); border: 1px solid var(--cp-border);
+  border-radius: 0.625rem; padding: 6px 10px; font-size: 11px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 5;
+  box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+}
+.trend-x { display: flex; gap: 5px; margin-top: 6px; }
+.trend-x span { flex: 1; text-align: center; font-size: 10px; color: var(--cp-text-soft); }
+
+/* ---------- tables ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--cp-text-muted); font-weight: 600; padding: 8px 10px;
+  border-bottom: 1px solid var(--cp-border);
+}
+th.r, td.r { text-align: right; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--cp-border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--cp-accent-soft); }
+.avatar {
+  display: inline-flex; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--cp-accent-soft); color: var(--cp-accent);
+  align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+  margin-right: 8px; vertical-align: middle;
+}
+.tag {
+  display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 999px;
+  border: 1px solid var(--cp-border); color: var(--cp-text-muted); background: var(--cp-surface-soft);
+}
+.tag.ok { color: var(--cp-success); border-color: var(--cp-success); background: transparent; }
+.tag.warn { color: var(--cp-warning); border-color: var(--cp-warning); background: transparent; }
+.tag.danger { color: var(--cp-danger); border-color: var(--cp-danger); background: transparent; }
+
+/* budget progress in table */
+.bp { display: flex; align-items: center; gap: 10px; min-width: 160px; }
+.bp .track { flex: 1; height: 8px; border-radius: 999px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); overflow: hidden; }
+.bp .fill { height: 100%; border-radius: 999px; }
+.bp .pct { font-size: 12px; color: var(--cp-text-muted); width: 38px; text-align: right; }
+
+.foot { margin-top: 28px; font-size: 12px; color: var(--cp-text-soft); text-align: center; }
+.foot code { background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 4px; padding: 1px 6px; }
+
+/* ---------- agent ROI ---------- */
+.roi-note {
+  font-size: 12px; color: var(--cp-text-muted); line-height: 1.5;
+  background: var(--cp-accent-soft); border: 1px solid var(--cp-border);
+  border-radius: 0.625rem; padding: 10px 14px; margin-bottom: 16px;
+}
+.roi-row { display: grid; grid-template-columns: 170px 1fr 200px; align-items: center; gap: 12px; margin-bottom: 12px; }
+.roi-row .lbl { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roi-row .meta { font-size: 11px; color: var(--cp-text-soft); text-align: right; line-height: 1.5; }
+.roi-badge {
+  display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px;
+  border-radius: 999px; border: 1px solid var(--cp-border);
+}
+.roi-badge.good { color: var(--cp-success); border-color: var(--cp-success); }
+.roi-badge.mid { color: var(--cp-warning); border-color: var(--cp-warning); }
+.roi-badge.bad { color: var(--cp-danger); border-color: var(--cp-danger); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Z</div>
+  <div>
+    <h1>Copilot AI Credits — Admin Panel</h1>
+    <div class="sub">Enterprise: <strong>zava-demos</strong> · Billing period: June 2026 · Mock data</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="pill">Resets <strong>Jul 1, 00:00 UTC</strong></span>
+  <button class="theme-toggle" id="themeToggle">◐ Theme</button>
+</div>
+
+<div class="container">
+
+  <!-- controls -->
+  <div class="controls">
+    <div class="seg" id="scopeSeg">
+      <button data-scope="org" class="active">Organization</button>
+      <button data-scope="team">Team</button>
+    </div>
+    <select id="entitySelect"></select>
+    <span class="hint" id="scopeHint"></span>
+  </div>
+
+  <!-- KPI row -->
+  <div class="grid kpis" id="kpiRow"></div>
+
+  <!-- enterprise pool + model mix -->
+  <div class="grid row2">
+    <div class="card">
+      <h3>Enterprise credit pool — zava-demos</h3>
+      <div class="pool-wrap">
+        <div class="gauge">
+          <svg width="170" height="170" viewBox="0 0 170 170">
+            <circle cx="85" cy="85" r="72" fill="none" stroke="var(--cp-surface-soft)" stroke-width="16"/>
+            <circle id="gaugeArc" cx="85" cy="85" r="72" fill="none" stroke="var(--cp-accent)"
+                    stroke-width="16" stroke-linecap="round"
+                    stroke-dasharray="452.4" stroke-dashoffset="452.4"/>
+          </svg>
+          <div class="center">
+            <div class="big" id="gaugePct">—</div>
+            <div class="small">pool consumed</div>
+          </div>
+        </div>
+        <div class="pool-stats" id="poolStats"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 id="modelTitle">Model mix (credits)</h3>
+      <div class="donut-wrap">
+        <svg id="donut" width="150" height="150" viewBox="0 0 42 42"></svg>
+        <div class="legend" id="modelLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- daily trend + credits vs LOC -->
+  <div class="grid row3">
+    <div class="card">
+      <h3 id="trendTitle">Daily credit burn — June 2026</h3>
+      <div class="trend" id="trendChart"></div>
+      <div class="trend-x" id="trendX"></div>
+    </div>
+    <div class="card">
+      <h3 id="locTitle">Credits vs LOC committed</h3>
+      <div id="locBars"></div>
+    </div>
+  </div>
+
+  <!-- agent ROI -->
+  <div class="card" style="margin-bottom:20px">
+    <h3 id="roiTitle">Agent ROI — (value of agent output − token cost) ÷ token cost</h3>
+    <div class="roi-note">
+      Value proxy: merged LOC × <span class="mono" id="roiValuePerLoc"></span>/LOC · Token cost: gross credits × $0.01.
+      Optimizing cost when output value is zero is useless work — and raising value usually <em>means</em> trimming tokens:
+      less irrelevant context = better answers <em>and</em> a smaller bill.
+    </div>
+    <div id="roiBars"></div>
+  </div>
+
+  <!-- budgets -->
+  <div class="card" style="margin-bottom:20px">
+    <h3 id="budgetTitle">User-level budgets (ai_credits SKU)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Budget scope</th><th>Entity</th><th class="r">Budget</th>
+          <th class="r">Consumed</th><th>Utilization</th><th>Enforcement</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="budgetBody"></tbody>
+    </table>
+  </div>
+
+  <!-- per-user / per-team detail -->
+  <div class="card">
+    <h3 id="detailTitle">Per-user detail</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>User</th><th>Team</th><th class="r">Credits (gross)</th>
+          <th class="r">Net billed</th><th>Top model</th>
+          <th class="r">LOC committed</th><th class="r">Agent ROI</th><th>Budget</th>
+        </tr>
+      </thead>
+      <tbody id="userBody"></tbody>
+    </table>
+  </div>
+
+  <div class="foot">
+    Mock data. Live sources: <code>GET /enterprises/{ent}/settings/billing/ai_credit/usage?user=…</code> ·
+    <code>GET /enterprises/{ent}/settings/billing/budgets</code> ·
+    <code>GET /repos/{o}/{r}/stats/contributors</code>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   MOCK DATA — shaped like the real GitHub billing API responses
+   ============================================================ */
+const ENTERPRISE = {
+  name: "zava-demos",
+  poolTotal: 250000,          // ai-credits purchased / included for period
+  poolConsumed: 162340,       // gross consumed enterprise-wide MTD
+  netOverageUSD: 412.50,      // billed beyond included allowance
+  pricePerUnit: 0.01,
+};
+
+/* Agent ROI = (value of agent output − token cost) / token cost
+   Value proxy (mock): merged LOC × VALUE_PER_LOC dollars.
+   Token cost: gross credits × pricePerUnit. Swap the value proxy for
+   your own signal (story points, PRs merged, revenue attribution). */
+const VALUE_PER_LOC = 0.05; // $ value attributed per merged LOC (proxy)
+function agentROI(loc, credits) {
+  const value = loc * VALUE_PER_LOC;
+  const cost = credits * ENTERPRISE.pricePerUnit;
+  return cost > 0 ? (value - cost) / cost : 0;
+}
+function roiBadge(r) {
+  const cls = r >= 5 ? "good" : r >= 1 ? "mid" : "bad";
+  return `<span class="roi-badge ${cls}">${r.toFixed(1)}×</span>`;
+}
+
+const MODELS = [
+  { name: "Claude Opus 4.7",    color: "var(--cp-accent)" },
+  { name: "GPT-5",              color: "var(--cp-link)" },
+  { name: "Claude Sonnet 4.5",  color: "var(--cp-success)" },
+  { name: "Gemini 3 Pro",       color: "var(--cp-warning)" },
+  { name: "o4-mini",            color: "var(--cp-border-strong)" },
+];
+
+const ORGS = [
+  { name: "Zava-app-modernization", credits: 68420, loc: 184200, models: [34200, 18400, 9800, 4100, 1920] },
+  { name: "Copilot-Genie",          credits: 52110, loc: 121500, models: [21900, 15600, 8900, 3800, 1910] },
+  { name: "Zava-org",               credits: 41810, loc:  98400, models: [16800, 12400, 7600, 3300, 1710] },
+];
+
+const TEAMS = [
+  { name: "platform-core",  org: "Zava-app-modernization", credits: 28900, loc: 84200, models: [14800, 7200, 4100, 1900, 900] },
+  { name: "web-frontend",   org: "Zava-app-modernization", credits: 21400, loc: 64800, models: [9800, 6400, 3200, 1300, 700] },
+  { name: "data-eng",       org: "Copilot-Genie",          credits: 24600, loc: 41200, models: [11200, 7400, 3900, 1500, 600] },
+  { name: "ml-research",    org: "Copilot-Genie",          credits: 27510, loc: 38900, models: [14100, 8200, 3400, 1200, 610] },
+  { name: "sre-ops",        org: "Zava-org",               credits: 18200, loc: 52600, models: [7200, 5600, 3500, 1300, 600] },
+];
+
+const USERS = [
+  { login: "heisenberg-alt", team: "platform-core", credits: 9120, net: 0,     topModel: "Claude Opus 4.7", loc: 24800, budget: { amount: 12000, consumed: 9120,  enforce: true  } },
+  { login: "monalisa",       team: "platform-core", credits: 7480, net: 0,     topModel: "GPT-5",            loc: 31200, budget: { amount: 10000, consumed: 7480,  enforce: true  } },
+  { login: "octocat",        team: "web-frontend",  credits: 6840, net: 18.4,  topModel: "Claude Opus 4.7",  loc: 18700, budget: { amount:  6000, consumed: 6840,  enforce: false } },
+  { login: "hubot",          team: "data-eng",      credits: 5910, net: 0,     topModel: "Claude Sonnet 4.5",loc: 12400, budget: { amount:  8000, consumed: 5910,  enforce: true  } },
+  { login: "nat",            team: "ml-research",   credits: 8240, net: 22.4,  topModel: "Claude Opus 4.7",  loc:  8900, budget: { amount:  8000, consumed: 8240,  enforce: false } },
+  { login: "defunkt",        team: "sre-ops",       credits: 4310, net: 0,     topModel: "GPT-5",            loc: 16200, budget: { amount:  7000, consumed: 4310,  enforce: true  } },
+  { login: "mojombo",        team: "web-frontend",  credits: 3980, net: 0,     topModel: "Gemini 3 Pro",     loc: 14100, budget: { amount:  6000, consumed: 3980,  enforce: true  } },
+  { login: "pjhyett",        team: "data-eng",      credits: 5120, net: 0,     topModel: "GPT-5",            loc:  9800, budget: { amount:  8000, consumed: 5120,  enforce: true  } },
+];
+
+const ORG_BUDGETS = [
+  { scope: "organization", entity: "Zava-app-modernization", amount: 80000, consumed: 68420, enforce: false },
+  { scope: "organization", entity: "Copilot-Genie",          amount: 60000, consumed: 52110, enforce: true  },
+  { scope: "organization", entity: "Zava-org",               amount: 50000, consumed: 41810, enforce: true  },
+  { scope: "cost_center",  entity: "AI Initiatives",          amount: 30000, consumed: 17300, enforce: false },
+];
+
+// deterministic pseudo-random daily series (Jun 1–10, MTD)
+function dailySeries(seedTotal) {
+  const days = 10, out = [];
+  let acc = 0;
+  for (let i = 0; i < days; i++) {
+    const wobble = 0.6 + 0.8 * Math.abs(Math.sin((i + 1) * 2.7 + seedTotal % 13));
+    out.push(wobble);
+    acc += wobble;
+  }
+  return out.map(v => Math.round(v / acc * seedTotal));
+}
+
+/* ============================================================
+   STATE + RENDER
+   ============================================================ */
+let scope = "org";       // "org" | "team"
+let entity = "ALL";
+
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString("en-US");
+const usd = n => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function currentRows() { return scope === "org" ? ORGS : TEAMS; }
+function selectedRows() {
+  const rows = currentRows();
+  return entity === "ALL" ? rows : rows.filter(r => r.name === entity);
+}
+
+function renderEntitySelect() {
+  const rows = currentRows();
+  $("entitySelect").innerHTML =
+    `<option value="ALL">All ${scope === "org" ? "organizations" : "teams"}</option>` +
+    rows.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
+  $("entitySelect").value = entity;
+  $("scopeHint").textContent = scope === "org"
+    ? "Source: /enterprises/zava-demos/settings/billing/ai_credit/usage (grouped by org)"
+    : "Source: per-user billing API joined to team membership";
+}
+
+function renderKPIs() {
+  const rows = selectedRows();
+  const credits = rows.reduce((s, r) => s + r.credits, 0);
+  const loc = rows.reduce((s, r) => s + r.loc, 0);
+  const ratio = credits ? (loc / credits) : 0;
+  const roiVal = agentROI(loc, credits);
+  $("kpiRow").innerHTML = `
+    <div class="card kpi"><h3>Agent ROI</h3>
+      <div class="value" style="color:${roiVal >= 5 ? 'var(--cp-success)' : roiVal >= 1 ? 'var(--cp-warning)' : 'var(--cp-danger)'}">${roiVal.toFixed(1)}×</div>
+      <div class="delta">(value − token cost) ÷ token cost</div></div>
+    <div class="card kpi"><h3>Credits consumed (gross)</h3>
+      <div class="value">${fmt(credits)}</div>
+      <div class="delta up">▲ 12% vs May MTD</div></div>
+    <div class="card kpi"><h3>Net overage billed</h3>
+      <div class="value">${usd(rows === ORGS || entity === "ALL" ? ENTERPRISE.netOverageUSD : ENTERPRISE.netOverageUSD * credits / 162340)}</div>
+      <div class="delta warn">3 users past included allowance</div></div>
+    <div class="card kpi"><h3>LOC committed (MTD)</h3>
+      <div class="value">${fmt(loc)}</div>
+      <div class="delta up">▲ 8% vs May MTD</div></div>
+    <div class="card kpi"><h3>LOC per credit</h3>
+      <div class="value">${ratio.toFixed(1)}</div>
+      <div class="delta">directional signal, not a KPI target</div></div>`;
+}
+
+function renderPool() {
+  const pct = ENTERPRISE.poolConsumed / ENTERPRISE.poolTotal;
+  const C = 2 * Math.PI * 72;
+  const arc = $("gaugeArc");
+  arc.setAttribute("stroke-dasharray", C);
+  arc.setAttribute("stroke-dashoffset", C * (1 - pct));
+  arc.setAttribute("stroke", pct > 0.9 ? "var(--cp-danger)" : pct > 0.75 ? "var(--cp-warning)" : "var(--cp-accent)");
+  $("gaugePct").textContent = Math.round(pct * 100) + "%";
+  const remaining = ENTERPRISE.poolTotal - ENTERPRISE.poolConsumed;
+  const dayOfMonth = 11, daysInMonth = 30;
+  const burnRate = ENTERPRISE.poolConsumed / dayOfMonth;
+  const projected = Math.round(burnRate * daysInMonth);
+  $("poolStats").innerHTML = `
+    <div class="pool-stat"><span class="lbl">Pool size (included)</span><span class="val">${fmt(ENTERPRISE.poolTotal)} credits</span></div>
+    <div class="pool-stat"><span class="lbl">Consumed MTD</span><span class="val">${fmt(ENTERPRISE.poolConsumed)} credits</span></div>
+    <div class="pool-stat"><span class="lbl">Remaining</span><span class="val" style="color:var(--cp-success)">${fmt(remaining)} credits</span></div>
+    <div class="pool-stat"><span class="lbl">Projected month-end</span><span class="val" style="color:${projected > ENTERPRISE.poolTotal ? 'var(--cp-danger)' : 'var(--cp-text)'}">${fmt(projected)} credits</span></div>
+    <div class="pool-stat"><span class="lbl">Net overage billed</span><span class="val">${usd(ENTERPRISE.netOverageUSD)}</span></div>`;
+}
+
+function renderDonut() {
+  const rows = selectedRows();
+  const totals = MODELS.map((_, i) => rows.reduce((s, r) => s + r.models[i], 0));
+  const sum = totals.reduce((a, b) => a + b, 0);
+  const svg = $("donut");
+  let offset = 25; // start at top
+  svg.innerHTML = `<circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--cp-surface-soft)" stroke-width="6"></circle>`;
+  totals.forEach((v, i) => {
+    const pct = v / sum * 100;
+    svg.innerHTML += `<circle cx="21" cy="21" r="15.9155" fill="none"
+      stroke="${MODELS[i].color}" stroke-width="6"
+      stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="${offset}"></circle>`;
+    offset -= pct;
+  });
+  $("modelLegend").innerHTML = MODELS.map((m, i) => `
+    <div class="item"><span class="sw" style="background:${m.color}"></span>
+      ${m.name}<span class="pct">${fmt(totals[i])} · ${(totals[i] / sum * 100).toFixed(0)}%</span></div>`).join("");
+  $("modelTitle").textContent = `Model mix — ${entity === "ALL" ? (scope === "org" ? "all orgs" : "all teams") : entity}`;
+}
+
+function renderTrend() {
+  const rows = selectedRows();
+  const total = rows.reduce((s, r) => s + r.credits, 0);
+  const series = dailySeries(total);
+  const max = Math.max(...series);
+  $("trendChart").innerHTML = series.map((v, i) => {
+    const hPct = v / max * 100;
+    const included = Math.round(v * 0.85), overage = v - included;
+    return `<div class="day">
+      <div class="tip">Jun ${i + 1}: ${fmt(v)} credits<br>incl. ${fmt(included)} · overage ${fmt(overage)}</div>
+      <div class="seg-a" style="height:${hPct * 0.85}%"></div>
+      <div class="seg-b" style="height:${hPct * 0.15}%"></div>
+    </div>`;
+  }).join("");
+  $("trendX").innerHTML = series.map((_, i) => `<span>${i + 1}</span>`).join("");
+  $("trendTitle").textContent = `Daily credit burn — June 2026 (${entity === "ALL" ? "all " + (scope === "org" ? "orgs" : "teams") : entity})`;
+}
+
+function renderLocBars() {
+  const rows = currentRows();
+  const maxC = Math.max(...rows.map(r => r.credits));
+  const maxL = Math.max(...rows.map(r => r.loc));
+  $("locBars").innerHTML = rows.map(r => `
+    <div class="bar-row">
+      <span class="lbl" title="${r.name}">${r.name}</span>
+      <div>
+        <div class="bar-track" style="margin-bottom:4px"><div class="bar-fill" style="width:${r.credits / maxC * 100}%;background:var(--cp-accent)"></div></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${r.loc / maxL * 100}%;background:var(--cp-link)"></div></div>
+      </div>
+      <span class="num">${fmt(r.credits)} cr<br>${fmt(r.loc)} loc</span>
+    </div>`).join("") +
+    `<div style="display:flex;gap:18px;margin-top:8px;font-size:12px;color:var(--cp-text-muted)">
+      <span><span class="sw" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--cp-accent);margin-right:6px"></span>AI credits</span>
+      <span><span class="sw" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--cp-link);margin-right:6px"></span>LOC committed</span>
+    </div>`;
+  $("locTitle").textContent = `Credits vs LOC — by ${scope === "org" ? "organization" : "team"}`;
+}
+
+function renderROI() {
+  const rows = [...currentRows()].map(r => ({ ...r, roi: agentROI(r.loc, r.credits) }))
+    .sort((a, b) => b.roi - a.roi);
+  const maxRoi = Math.max(...rows.map(r => r.roi), 1);
+  $("roiValuePerLoc").textContent = "$" + VALUE_PER_LOC.toFixed(2);
+  $("roiBars").innerHTML = rows.map(r => {
+    const value = r.loc * VALUE_PER_LOC;
+    const cost = r.credits * ENTERPRISE.pricePerUnit;
+    const color = r.roi >= 5 ? "var(--cp-success)" : r.roi >= 1 ? "var(--cp-warning)" : "var(--cp-danger)";
+    return `<div class="roi-row">
+      <span class="lbl" title="${r.name}">${r.name} ${roiBadge(r.roi)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(r.roi / maxRoi * 100, 2)}%;background:${color}"></div></div>
+      <span class="meta">value ${usd(value)} · cost ${usd(cost)}<br>net ${usd(value - cost)}</span>
+    </div>`;
+  }).join("");
+  $("roiTitle").textContent = `Agent ROI by ${scope === "org" ? "organization" : "team"} — (value − token cost) ÷ token cost`;
+}
+
+function budgetRow(b) {
+  const pct = Math.min(b.consumed / b.amount, 1.2);
+  const shown = Math.min(pct, 1) * 100;
+  const color = pct >= 1 ? "var(--cp-danger)" : pct >= 0.85 ? "var(--cp-warning)" : "var(--cp-success)";
+  const status = pct >= 1
+    ? `<span class="tag danger">Exceeded</span>`
+    : pct >= 0.85
+      ? `<span class="tag warn">≥ 85%</span>`
+      : `<span class="tag ok">Healthy</span>`;
+  return `<tr>
+    <td><span class="tag">${b.scope}</span></td>
+    <td>${b.entity}</td>
+    <td class="r mono">${fmt(b.amount)}</td>
+    <td class="r mono">${fmt(b.consumed)}</td>
+    <td><div class="bp"><div class="track"><div class="fill" style="width:${shown}%;background:${color}"></div></div><span class="pct">${Math.round(pct * 100)}%</span></div></td>
+    <td>${b.enforce ? `<span class="tag ok">hard stop</span>` : `<span class="tag">alert only</span>`}</td>
+    <td>${status}</td>
+  </tr>`;
+}
+
+function renderBudgets() {
+  const userBudgets = USERS
+    .filter(u => scope === "org" || entity === "ALL" || u.team === entity)
+    .map(u => ({ scope: "user", entity: u.login, amount: u.budget.amount, consumed: u.budget.consumed, enforce: u.budget.enforce }));
+  const rows = scope === "org" ? [...ORG_BUDGETS, ...userBudgets] : userBudgets;
+  $("budgetBody").innerHTML = rows.map(budgetRow).join("");
+  $("budgetTitle").textContent = scope === "org"
+    ? "Budgets — org, cost-center & user scopes (ai_credits / premium_requests SKUs)"
+    : `User-level budgets — ${entity === "ALL" ? "all teams" : entity}`;
+}
+
+function renderUsers() {
+  const rows = USERS.filter(u => scope === "org" || entity === "ALL" || u.team === entity);
+  $("userBody").innerHTML = rows
+    .sort((a, b) => b.credits - a.credits)
+    .map(u => {
+      const pct = u.budget.consumed / u.budget.amount;
+      const color = pct >= 1 ? "var(--cp-danger)" : pct >= 0.85 ? "var(--cp-warning)" : "var(--cp-success)";
+      return `<tr>
+        <td><span class="avatar">${u.login.slice(0, 2).toUpperCase()}</span>${u.login}</td>
+        <td><span class="tag">${u.team}</span></td>
+        <td class="r mono">${fmt(u.credits)}</td>
+        <td class="r mono">${u.net ? usd(u.net) : "—"}</td>
+        <td>${u.topModel}</td>
+        <td class="r mono">${fmt(u.loc)}</td>
+        <td class="r">${roiBadge(agentROI(u.loc, u.credits))}</td>
+        <td><div class="bp"><div class="track"><div class="fill" style="width:${Math.min(pct, 1) * 100}%;background:${color}"></div></div><span class="pct">${Math.round(pct * 100)}%</span></div></td>
+      </tr>`;
+    }).join("");
+  $("detailTitle").textContent = `Per-user detail — ${rows.length} users`;
+}
+
+function renderAll() {
+  renderEntitySelect();
+  renderKPIs();
+  renderPool();
+  renderDonut();
+  renderTrend();
+  renderLocBars();
+  renderROI();
+  renderBudgets();
+  renderUsers();
+}
+
+/* ---------- events ---------- */
+$("scopeSeg").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  scope = btn.dataset.scope;
+  entity = "ALL";
+  document.querySelectorAll("#scopeSeg button").forEach(b => b.classList.toggle("active", b === btn));
+  renderAll();
+});
+$("entitySelect").addEventListener("change", e => { entity = e.target.value; renderAll(); });
+$("themeToggle").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+});
+
+renderAll();
+</script>
+</body>
+</html>
