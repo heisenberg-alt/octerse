@@ -750,8 +750,17 @@ async function loadDashboard() {
 
 function showLogin() { $("authOverlay").hidden = false; $("sourceBadge").textContent = "signed out"; }
 
+async function hasSession() {
+  try { await api("/api/auth/me"); return true; } catch { return false; }
+}
+
+/* Generation counter: a new sign-in click (or page state change) cancels
+   any previous poll loop instead of stacking another one. */
+let pollGen = 0;
+
 $("authStart").addEventListener("click", async () => {
   $("authError").hidden = true;
+  const gen = ++pollGen;
   try {
     const d = await api("/api/auth/device/start", { method: "POST" });
     $("authCode").textContent = d.user_code;
@@ -759,14 +768,20 @@ $("authStart").addEventListener("click", async () => {
     $("authLink").textContent = d.verification_uri;
     $("authStep").hidden = false;
     const poll = async () => {
+      if (gen !== pollGen) return; // superseded by a newer sign-in attempt
+      // The session may have been established in another tab/window —
+      // if the cookie is already here, stop polling and load.
+      if (await hasSession()) { $("authOverlay").hidden = true; loadDashboard(); return; }
       try {
         const r = await api("/api/auth/device/poll", {
           method: "POST", body: JSON.stringify({ pending_id: d.pending_id }),
         });
+        if (gen !== pollGen) return;
         if (r.status === "pending") { setTimeout(poll, (d.interval || 5) * 1000); return; }
         if (r.status === "ok") { $("authOverlay").hidden = true; loadDashboard(); return; }
         $("authError").textContent = r.detail || ("Sign-in failed: " + (r.error || "unknown"));
       } catch (e) {
+        if (gen !== pollGen) return;
         $("authError").textContent = "Sign-in failed: " + e.message;
       }
       $("authError").hidden = false;
@@ -784,9 +799,19 @@ $("logoutBtn").addEventListener("click", async () => {
   location.reload();
 });
 
+// If the user authorized in another tab/window, pick up the session when
+// this tab regains focus instead of waiting on a stale device code.
+window.addEventListener("focus", async () => {
+  if (!$("authOverlay").hidden && await hasSession()) {
+    pollGen++;
+    $("authOverlay").hidden = true;
+    loadDashboard();
+  }
+});
+
 (async () => {
-  try { await api("/api/auth/me"); loadDashboard(); }
-  catch { showLogin(); }
+  if (await hasSession()) loadDashboard();
+  else showLogin();
 })();
 </script>
 </body>
