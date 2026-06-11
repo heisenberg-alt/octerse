@@ -124,7 +124,15 @@ async def device_start(request: Request):
     )
     data = resp.json()
     if resp.status_code >= 400 or "device_code" not in data:
-        raise HTTPException(status_code=502, detail="GitHub device authorization failed")
+        reason = data.get("error_description") or data.get("error") or f"HTTP {resp.status_code}"
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"GitHub device authorization failed: {reason}. "
+                "Check GITHUB_OAUTH_CLIENT_ID — it must be a real OAuth App "
+                "client id with device flow enabled."
+            ),
+        )
     pending_id = secrets.token_urlsafe(24)
     request.app.state.pending[pending_id] = {
         "device_code": data["device_code"],

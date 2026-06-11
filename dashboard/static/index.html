@@ -704,7 +704,13 @@ $("themeToggle").addEventListener("click", () => {
    ============================================================ */
 const api = async (path, opts = {}) => {
   const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
-  if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+  if (!r.ok) {
+    let detail = "";
+    try { detail = (await r.json()).detail || ""; } catch {}
+    const e = new Error(detail || ("HTTP " + r.status));
+    e.status = r.status;
+    throw e;
+  }
   return r.json();
 };
 
