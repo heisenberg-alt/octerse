@@ -25,7 +25,10 @@ from .config import Settings
 from .github import GitHubClient, GitHubError
 
 COOKIE_NAME = "octerse_session"
-OAUTH_SCOPES = "read:org manage_billing:copilot"
+# admin:org is required by the billing usage endpoint
+# (/organizations/{org}/settings/billing/usage) for classic OAuth tokens;
+# manage_billing:copilot covers the Copilot seats/billing endpoints.
+OAUTH_SCOPES = "admin:org manage_billing:copilot"
 DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
 
 router = APIRouter(prefix="/api/auth")

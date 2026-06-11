@@ -395,6 +395,7 @@ tbody tr:hover { background: var(--cp-accent-soft); }
     <code>GET /organizations/{org}/settings/billing/usage</code> ·
     <code>GET /organizations/{org}/settings/billing/budgets</code> ·
     <code>GET /orgs/{org}/copilot/billing/seats</code><span id="estimatedNote"></span>
+    <div id="apiErrors" style="margin-top:6px;color:var(--cp-warning)"></div>
   </div>
 </div>
 
@@ -735,6 +736,11 @@ function applyData(d) {
   teamBtn.disabled = TEAMS.length === 0;
   teamBtn.title = TEAMS.length ? "" : "Team-level metrics not connected yet";
   $("estimatedNote").textContent = ESTIMATED.length ? ` · ~ estimated fields: ${ESTIMATED.join(", ")}` : "";
+  const errs = d.errors
+    ? Object.entries(d.errors).flatMap(([org, srcs]) =>
+        Object.entries(srcs).map(([src, msg]) => `${org} · ${src}: ${msg}`))
+    : [];
+  $("apiErrors").textContent = errs.length ? "⚠ Unavailable sources — " + errs.join("  |  ") : "";
   renderAll();
 }
 

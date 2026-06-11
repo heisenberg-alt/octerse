@@ -51,20 +51,23 @@ def _period(now: dt.date) -> dict:
 
 
 async def _org_snapshot(gh: GitHubClient, org: str, period: dict) -> dict:
-    """Fetch + parse one org; degrades gracefully per endpoint."""
+    """Fetch + parse one org; degrades gracefully per endpoint and records
+    which sources failed so the UI can show partial-data warnings."""
     year, month = int(period["until"][:4]), int(period["until"][5:7])
+    errors: dict[str, str] = {}
 
-    async def safe(coro, fallback):
+    async def safe(coro, fallback, label: str):
         try:
             return await coro
-        except GitHubError:
+        except GitHubError as exc:
+            errors[label] = f"HTTP {exc.status}: {exc.message}"
             return fallback
 
     metrics, billing, budgets, seats = await asyncio.gather(
-        safe(gh.copilot_metrics(org, period["since"], period["until"]), []),
-        safe(gh.billing_usage(org, year, month), {"usageItems": []}),
-        safe(gh.budgets(org), {}),
-        safe(gh.copilot_seats(org), {}),
+        safe(gh.copilot_metrics(org, period["since"], period["until"]), [], "metrics"),
+        safe(gh.billing_usage(org, year, month), {"usageItems": []}, "billing"),
+        safe(gh.budgets(org), {}, "budgets"),
+        safe(gh.copilot_seats(org), {}, "seats"),
     )
     return {
         "org": org,
@@ -77,6 +80,7 @@ async def _org_snapshot(gh: GitHubClient, org: str, period: dict) -> dict:
         "premium": extract_premium_quantity(billing),
         "budgets": extract_budgets(budgets),
         "seats": extract_seats(seats),
+        "errors": errors,
     }
 
 
@@ -144,6 +148,8 @@ def _assemble(snapshots: list[dict], period: dict, settings: Settings) -> dict:
     if not budgets:
         estimated.add("pool")
 
+    errors = {snap["org"]: snap["errors"] for snap in snapshots if snap["errors"]}
+
     return {
         "enterprise": {
             "name": settings.enterprise or "all organizations",
@@ -160,6 +166,7 @@ def _assemble(snapshots: list[dict], period: dict, settings: Settings) -> dict:
         "days": [d[5:] if len(d) >= 10 else d for d in dates],  # MM-DD labels
         "period": period,
         "estimated": sorted(estimated),
+        "errors": errors,
         "generatedAt": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
     }
 

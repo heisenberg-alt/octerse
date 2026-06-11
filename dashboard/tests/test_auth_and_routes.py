@@ -70,6 +70,7 @@ async def test_dashboard_payload(client):
     assert "pool" in d["estimated"]         # budgets endpoint 404s in fixture
     assert d["budgets"] == []
     assert d["teams"] == []
+    assert "budgets" in d["errors"]["zava"]  # 404 surfaced, not swallowed
 
 
 async def test_unknown_pending_id(client):
